@@ -1,0 +1,40 @@
+datasets
+graphs
+*-out.txt
+**/*.out
+# each graph's distances from the sequential BFS (artifact/benchmark/make-refs.sh)
+/refs
+/artifact/refs
+# a machine's own settings for the scripts (see artifact/benchmark/config.sh)
+/artifact/benchmark/local.sh
+# the builds and results of the benchmark scripts' runs; the data files behind
+# the paper are in artifact/results
+/artifact/benchmark/build*/
+/artifact/benchmark/results/
+# earlier runs that the data files in artifact/results replaced
+/artifact/results/before-*/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.synctex(busy)
+*.synctex.gz(busy)
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+comment.cut
+
+tmp
+*.data
+
+*.disasm
+
+.DS_Store

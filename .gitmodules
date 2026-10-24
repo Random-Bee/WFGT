@@ -1,0 +1,12 @@
+[submodule "artifact/submodules/gapbs"]
+	path = artifact/submodules/gapbs
+	url = https://github.com/sbeamer/gapbs.git
+[submodule "artifact/submodules/gbbs"]
+	path = artifact/submodules/gbbs
+	url = https://github.com/ParAlg/gbbs.git
+[submodule "artifact/submodules/PASGAL"]
+	path = artifact/submodules/PASGAL
+	url = https://github.com/ucrparlay/PASGAL.git
+[submodule "artifact/submodules/parlaylib"]
+	path = artifact/submodules/parlaylib
+	url = https://github.com/ParAlg/parlaylib.git

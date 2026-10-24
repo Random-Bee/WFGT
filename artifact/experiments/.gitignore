@@ -1,0 +1,9 @@
+# what the scripts here write next to themselves: builds, run directories,
+# logs and data files. The data files behind the paper are in ../results
+*
+!*/
+!.gitignore
+!*.sh
+!*.cpp
+!*.hpp
+!*.py

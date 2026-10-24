@@ -1,0 +1,160 @@
+\section{Direction Optimization That Keeps the Method Wait-Free}
+\label{sec:dir-opt}
+
+Adding bottom-up levels raises three problems that a blocking implementation solves at its barriers: every thread must choose the same direction for a level, although threads can count the level differently; a bottom-up level works over all undiscovered vertices rather than over buckets, so it needs its own division of work and helping; and its test of whether a vertex is in the frontier must stay exact for a thread that has fallen behind. Algorithm~\ref{alg:wf-do} chooses the direction of each level, and Algorithm~\ref{alg:wf-bu} expands a bottom-up level; top-down levels are expanded as in Algorithm~\ref{alg:wf-td}, except for how vertices are discovered.
+
+\begin{figure*}
+    \centering
+    \begin{tikzpicture}[protocol]
+        % (a) choosing the plan of a level
+        \node[anchor=west] at (0,2.5) {(a) Choosing the plan of level $d$};
+        \node[anchor=east] at (1.15,1.85) {$N_d.\mathit{planner}$};
+        \draw[lane] (1.25,1.85) -- (8.3,1.85);
+        \node[note, fill=white] at (2.4,1.85) {empty};
+        \node[note, fill=white] at (6.1,1.85) {$t_1$};
+        \foreach \y/\t in {1.15/t_1, 0.45/t_2, -0.25/t_3} {
+            \draw[lane] (1.25,\y) -- (8.3,\y);
+            \node[anchor=east] at (1.15,\y) {$\t$};
+        }
+        \node[work] (a1) at (2.25,1.15) {propose $P_1$};
+        \node[cert] (a2) at (3.7,1.15) {claim};
+        \draw[densely dashed, gray] (a2.north) -- (3.7,1.85);
+        \draw[->] (a2.east) -- (8.3,1.15) node[note, pos=0.55, above] {follows $P_1$};
+        \node[work] (b1) at (2.85,0.45) {propose $P_2$};
+        \node[fail] (b2) at (4.45,0.45) {claim fails};
+        \node[work] (b3) at (5.95,0.45) {adopt $P_1$};
+        \draw[->] (b3.east) -- (8.3,0.45);
+        \node[note, fill=white] (c0) at (4.75,-0.25) {finds $\mathit{planner} = t_1$};
+        \node[work] (c1) at (6.55,-0.25) {adopt $P_1$};
+        \draw[->] (c1.east) -- (8.3,-0.25);
+        \node[note, anchor=north west, align=left] at (1.25,-0.65) {Every thread expands level $d$ with the plan $P_1$,\\ and none waits for another to choose it.};
+        % (b) the frontier test of a late thread
+        \node[anchor=west] at (9.2,2.5) {(b) The frontier test of a thread still in level $d$};
+        \foreach \i/\x in {1/11.75, 2/12.4, 3/13.05, 4/13.7, 5/14.35} {
+            \node at (\x,1.85) {$u_\i$};
+        }
+        \node[anchor=east, note] at (11.35,1.3) {distance from $s$};
+        \node[anchor=east, note] at (11.35,0.7) {bitmap, for level $d$};
+        \node[anchor=east, note] at (11.35,0.1) {the same bitmap,\\ for level $d{+}2$};
+        \foreach \v/\s [count=\i] in {d/cert, d/cert, d{+}1/work, d{+}1/work, d{+}2/work} {
+            \node[key, \s, minimum width=0.5cm, minimum height=0.42cm] at ({11.1 + 0.65*\i},1.3) {$\v$};
+        }
+        \foreach \v [count=\i] in {1, 1, 0, 0, 0} {
+            \node[key, work, minimum width=0.5cm, minimum height=0.42cm] at ({11.1 + 0.65*\i},0.7) {$\v$};
+        }
+        \foreach \v/\s [count=\i] in {0/work, 0/work, 0/work, 0/work, 1/fail} {
+            \node[key, \s, minimum width=0.5cm, minimum height=0.42cm] at ({11.1 + 0.65*\i},0.1) {$\v$};
+        }
+        \node[note, anchor=west] at (14.75,1.3) {$\mathit{dist}[u] = d$\\ stays exact};
+        \node[note, anchor=west] at (14.75,0.1) {a late test\\ finds $u_5$ in $L_d$};
+    \end{tikzpicture}
+    \caption{Direction optimization without a barrier. (a)~Threads $t_1$ and $t_2$ both propose a plan for level $d$ and try to claim it; the CAS of $t_1$ wins, and $t_2$ and the later $t_3$ adopt the proposal that $t_1$ wrote before its claim. (b)~A thread still in level $d$ tests the frontier $L_d$ late: the reused bitmap of GAPBS may by then describe $L_{d+2}$ and put $u_5$ in $L_d$, while the test $\mathit{dist}[u] = d$ stays exact.}
+    \Description{Two panels. On the left, three threads choose the plan of a level: two propose plans and race to claim the level with a compare-and-swap, the loser and a late thread adopt the winner's plan, and all three go on. On the right, five vertices with their distances, and a bitmap of the frontier at two levels: once the bitmap has been rewritten two levels later, a late test finds a vertex of that level in the frontier, while the test of the distance keeps the levels apart.}
+    \label{fig:do-protocol}
+\end{figure*}
+
+\begin{algorithm}
+\caption{Direction-optimizing BFS, as thread $t$ runs it. \textsc{ExpandLevel}, \textsc{Expand} and \textsc{AddLevel} are those of Algorithm~\ref{alg:wf-td}, with a call of \textsc{Discover} in place of lines~\ref{ln:td-push} and~\ref{ln:td-dist} of \textsc{Expand}. A plan $P$ holds a direction, the estimate $P.m_u$ of the edges not yet examined, and the size $P.n_f$ of the frontier of its level. The plan before level $0$ is (top-down, $m$, $1$), and $N_0.\mathit{edges}[0]$ holds the degree of $s$.}
+\label{alg:wf-do}
+\begin{algorithmic}[1]
+\Procedure{BFS}{$s$}
+    \State $N \gets N_0$; $P \gets$ the plan before level $0$
+    \While{$N \neq \mathit{null}$}
+        \State $P' \gets$ \Call{ChoosePlan}{$N$, $P$}
+        \If{$P'.\mathit{direction}$ is top-down}
+            \State \Call{ExpandLevel}{$N$}
+        \Else
+            \State \Call{ScanLevel}{$N$}
+        \EndIf
+        \State $P \gets P'$; $N \gets N.\mathit{next}$
+    \EndWhile
+\EndProcedure
+\Statex
+\Procedure{ChoosePlan}{$N$, $P$}
+    \If{$N.\mathit{planner}$ is empty}
+        \State $N.\mathit{proposal}[t] \gets$ \Call{Rule}{$P$, $N$} \label{ln:do-propose}
+        \State \Call{CAS}{$N.\mathit{planner}$, empty, $t$} \label{ln:do-claim}
+    \EndIf
+    \State \Return $N.\mathit{proposal}[N.\mathit{planner}]$ \label{ln:do-adopt}
+\EndProcedure
+\Statex
+\Procedure{Rule}{$P$, $N$} \Comment{the rule of GAPBS, from the plan $P$ of the level before}
+    \State $n_f \gets$ the sum of the sizes of the buckets of $N$
+    \State $m_f \gets 1$ if $P$ is bottom-up, and otherwise the sum of $N.\mathit{edges}[o]$ over all $o$
+    \IfThen{$n_f = 0$}{\Return (top-down, $P.m_u$, $0$)} \label{ln:do-empty}
+    \If{$P$ is bottom-up \textbf{and} ($n_f \geq P.n_f$ \textbf{or} $n_f > n / \beta$)}
+        \State \Return (bottom-up, $P.m_u$, $n_f$)
+    \EndIf
+    \IfThen{$m_f > P.m_u / \alpha$}{\Return (bottom-up, $P.m_u$, $n_f$)}
+    \State \Return (top-down, $P.m_u - m_f$, $n_f$)
+\EndProcedure
+\Statex
+\Procedure{Discover}{$N$, $v$} \Comment{in top-down levels}
+    \State append $v$ to $N.\mathit{next}.B[t]$
+    \If{\Call{CAS}{$\mathit{dist}[v]$, $-1$, $N.\mathit{depth}+1$}} \label{ln:do-cas}
+        \State add the degree of $v$ to $N.\mathit{next}.\mathit{edges}[t]$
+    \EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Agreeing on a Direction}
+\label{sec:do-plan}
+
+Before it expands a level, a thread must know the level's \emph{plan}: its direction, with the counts that the direction rule of Section~\ref{sec:bg-bfs} carries from one level to the next, such as $m_u$ and the size of the previous frontier. All threads must use the same plan, since the fields $\mathit{last}$ and $\mathit{done}$ of an entry refer to positions in its bucket in a top-down level, and to blocks of vertices in a bottom-up one, so a thread that scanned blocks while another expanded buckets would misread the other's progress and skip work that no thread has done.
+
+A blocking implementation lets one thread decide and makes the others wait. Instead, each node $N_d$ has a field $\mathit{planner}$, initially empty, and each of its entries room for a \emph{proposal} (\textsc{ChoosePlan}). A thread that finds $\mathit{planner}$ empty computes a plan with the direction rule (\textsc{Rule}) from the frontier size $n_f$, the sum of the sizes of the buckets of $N_d$, the count $m_f$ of the edges of the frontier (below), and the plan of level $d-1$; it writes the plan into its own entry (line~\ref{ln:do-propose}), and tries once to claim the level with a CAS on $\mathit{planner}$ from empty to its own number (line~\ref{ln:do-claim}). Every thread then adopts the proposal that $\mathit{planner}$ names (line~\ref{ln:do-adopt}). Since a thread claims only after writing its proposal, a stopped proposer cannot leave an unpublished decision, and no thread waits (Figure~\ref{fig:do-protocol}a). The first claim comes from a thread that has finished level $d-1$, and like the fence of Algorithm~\ref{alg:wf-td}, which it replaces, its CAS makes that thread's earlier writes visible, among them its last appends to $N_d$, before any thread reads those buckets to expand or scan the level, which a thread does only after \textsc{ChoosePlan} returns (Section~\ref{sec:pf-tso}); the reads of \textsc{Rule} before the CAS only choose the direction. Our implementation also uses the claim to leave a level early: a thread in level $d$ that finds $N_{d+1}$ linked with its plan claimed goes on to $N_{d+1}$, testing this before every owner that it visits, top-down, bottom-up or in the pass that writes frontier codes (Section~\ref{sec:impl-codes}), and before its own blocks; the level is over by then, since the first claim comes from a thread that has finished $N_d$ (Lemma~\ref{lem:early}). The algorithms leave this test out, since it only ends loops early.
+
+Proposals can differ, since threads read the buckets at different times and late appends change their sizes, but every thread adopts the same one, and which one wins affects only speed: the method finds the same distances in either direction, and ends the search only at a level whose buckets are empty (Section~\ref{sec:do-end}). The variant of Section~\ref{sec:variants} ends a search on a plan with $n_f = 0$ instead, and Section~\ref{sec:mem-proof} shows that no level with vertices gets one. Since all threads adopt the same plan for every level, and start from the same plan before level 0, they all propose from the same previous plan.
+
+The rule needs $m_f$, the number of edges of the frontier, which the top-down level that discovered the frontier counts. With the stores of Section~\ref{sec:td-order}, a vertex discovered by two threads at once would have its edges counted twice, which would overstate $m_f$, so that the rule could switch to bottom-up a level too early, and run $m_u$ down too fast. Top-down levels therefore discover a vertex with a CAS on its distance from $-1$ to $d+1$, still after appending it (\textsc{Discover}), and only the thread whose CAS succeeds adds the degree of the vertex to the edge count of its entry in $N_{d+1}$; a thread whose CAS fails has found the vertex discovered by a thread that appended it first, so the order of Section~\ref{sec:td-order} still holds. The count can fall short instead, if a thread stops between its CAS and adding the degree, or has not added it yet when a planner reads the count, which again changes only the direction chosen. After a bottom-up level, the rule takes $m_f = 1$, as GAPBS does.
+
+\begin{algorithm}
+\caption{A bottom-up level, as thread $t$ runs it. $X_{o,k}$ is the $k$-th block of thread $o$, $K_o$ the number of its blocks, and every stamp starts at $-1$.}
+\label{alg:wf-bu}
+\begin{algorithmic}[1]
+\Procedure{ScanLevel}{$N$}
+    \IfThen{$N.\mathit{next} = \mathit{null}$}{\Call{AddLevel}{$N$}}
+    \For{$k \gets 0$ \textbf{to} $K_t - 1$, \textbf{while not} $N.\mathit{done}[t]$} \label{ln:bu-own}
+        \IfThen{$\mathit{stamp}[t][k] \neq N.\mathit{depth}$}{\Call{ScanBlock}{$N$, $X_{t,k}$}}
+        \State $N.\mathit{last}[t] \gets k$ \label{ln:bu-last}
+    \EndFor
+    \State $N.\mathit{done}[t] \gets \mathit{true}$
+    \ForAll{threads $o \neq t$, in a random order}
+        \ForAll{blocks $k > N.\mathit{last}[o]$, in a random order}\label{ln:bu-help}
+            \IfThen{$N.\mathit{done}[o]$}{\textbf{break}}
+            \If{$k > N.\mathit{last}[o]$ \textbf{and} $\mathit{stamp}[o][k] \neq N.\mathit{depth}$}
+                \State \Call{ScanBlock}{$N$, $X_{o,k}$}
+                \State $\mathit{stamp}[o][k] \gets N.\mathit{depth}$ \label{ln:bu-stamp}
+            \EndIf
+        \EndFor
+        \State $N.\mathit{done}[o] \gets \mathit{true}$
+    \EndFor
+\EndProcedure
+\Statex
+\Procedure{ScanBlock}{$N$, $X$}
+    \ForAll{$v \in X$ with $\mathit{dist}[v] = -1$}
+        \If{some neighbor $u$ of $v$ has $\mathit{dist}[u] = N.\mathit{depth}$} \label{ln:bu-test}
+            \State append $v$ to $N.\mathit{next}.B[t]$ \label{ln:bu-append}
+            \State $\mathit{dist}[v] \gets N.\mathit{depth} + 1$ \label{ln:bu-dist}
+        \EndIf
+    \EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Bottom-Up Levels}
+\label{sec:do-bu}
+
+A bottom-up level divides the vertices into blocks of $W$ consecutive vertices, the last possibly shorter: block $b$ holds the vertices $Wb$ to $\min(W(b+1), n) - 1$, so there are $\lceil n / W \rceil$ blocks (Table~\ref{tab:params} lists $W$ with the other parameters of our implementation). A level gives block $b$ to thread $b \bmod T$, so the $k$-th block $X_{o,k}$ of thread $o$ is block $o + kT$, and thread $o$ has $K_o = \lceil (\lceil n/W \rceil - o) / T \rceil$ blocks, or none if $o \geq \lceil n/W \rceil$, so that the blocks of every thread spread over the whole range of vertex numbers, and a level whose undiscovered vertices lie mostly in one part of the range still gives every thread a share. Blocks take the place of buckets (\textsc{ScanLevel}): a thread scans its own blocks in order, publishing in $\mathit{last}_{d,t}$ the index $k$ of the last one it has finished (line~\ref{ln:bu-last}), and then helps the other threads, in a random order as in a top-down level, with the blocks after their $\mathit{last}$, in a random order of its own (line~\ref{ln:bu-help}). The flag $\mathit{done}_{d,o}$ is set once all of the blocks of thread $o$ are finished, by $o$ or a helper, and the owner and helpers stop once they see it set.
+
+A helper cannot rely on the owner's $\mathit{last}$ alone, since a delayed owner stops moving it, and every helper would then scan all of the owner's remaining blocks. A helper therefore stamps every block that it finishes with the depth of the level (line~\ref{ln:bu-stamp}), and the others skip a block whose stamp equals the current depth. A stamp left by an earlier level, or written late by a thread that has fallen behind, holds an older depth, which makes a thread scan a block again, but never skip one that needs scanning.
+
+Scanning a block tests every undiscovered vertex $v$ of the block (\textsc{ScanBlock}): if $v$ has a neighbor in the frontier, the thread appends $v$ to its own bucket in $N_{d+1}$, and only then sets $\mathit{dist}[v] = d+1$ (lines~\ref{ln:bu-append} and~\ref{ln:bu-dist}), so a thread that finds $v$ discovered finds it in a bucket. Threads that discover the same vertex at once write the same values, so these writes need no CAS, and since the discoveries go into buckets, the next level can go in either direction, and its plan can count its frontier.
+
+The test of the frontier is $\mathit{dist}[u] = d$ (line~\ref{ln:bu-test}). GAPBS tests a denser bitmap instead, swapping two bitmaps after every step and clearing one before the step fills it. That would not do for our method: a thread that has fallen behind in level $d$ would test against a bitmap that the others, by then in level $d+1$, are filling with $L_{d+2}$, and would give the undiscovered neighbors of those vertices the distance $d+1$ (Figure~\ref{fig:do-protocol}b); and since a thread can fall behind in any level, no bitmap could be reused during the search, so every bottom-up level would need $n$ bits of its own. The test of the distance is exact for any thread, however far behind, since a distance is written only with its final value and never changes once set (Section~\ref{sec:pf-safety}). Our implementation tests a denser array of one byte per vertex that keeps this exactness (Section~\ref{sec:impl-codes}).
+
+\subsection{Ending the Search}
+\label{sec:do-end}
+
+As in Section~\ref{sec:wf-topdown}, the search ends at the first level without vertices, and only a top-down level ends it: a bottom-up level always links a successor, since it cannot tell in advance whether it will discover anything, while every proposal for a level whose buckets are all empty finds $n_f = 0$, for which \textsc{Rule} chooses top-down (Algorithm~\ref{alg:wf-do}, line~\ref{ln:do-empty}), so every thread that enters that level finds its buckets empty, links no successor, and returns.

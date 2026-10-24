@@ -1,0 +1,108 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\usepackage{xspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, decorations.pathmorphing, calc}
+
+% the protocol diagrams: steps of a thread along its lane, white for work, blue
+% for a write that lets other threads skip work, gray for a late write, red for
+% a check that fails
+\tikzset{
+    protocol/.style={>=Stealth, font=\footnotesize},
+    op/.style={draw, rounded corners=1.5pt, inner sep=2.5pt, minimum height=0.48cm, align=center},
+    work/.style={op, fill=white},
+    cert/.style={op, fill=blue!12, draw=blue!60!black},
+    late/.style={op, fill=gray!10, draw=gray!60, text=gray!40!black, densely dashed},
+    fail/.style={op, fill=red!8, draw=red!60!black},
+    note/.style={font=\scriptsize, align=center, text=black!80},
+    lane/.style={draw=gray!45, line width=0.4pt},
+    stall/.style={decorate, decoration={zigzag, segment length=5pt, amplitude=1.8pt}, draw=red!60!black, thick},
+    event/.style={circle, draw, fill=white, inner sep=0.6pt, font=\tiny\bfseries},
+    key/.style={op, minimum width=0.45cm, minimum height=0.28cm, inner sep=0pt},
+}
+
+\usepackage{amsmath}
+
+\newtheorem*{remark*}{Remark}
+
+\newcommand{\pending}[1]{\textcolor{red}{#1}}
+
+% a conditional on one line, for algorithms that would not fit a column otherwise
+\algnewcommand{\IfThen}[2]{\State \algorithmicif\ #1\ \algorithmicthen\ #2}
+
+\usepgfplotslibrary{groupplots}
+
+% the names of our programs in the experiments
+\newcommand{\wfdo}{WF-DO\xspace}
+\newcommand{\wfdomem}{WF-DO-mem\xspace}
+\newcommand{\codeurl}{\href{https://github.com/Random-Bee/WFGT/tree/main/artifact}{\nolinkurl{github.com/Random-Bee/WFGT/tree/main/artifact}}}
+
+\AtBeginDocument{%
+\providecommand\BibTeX{{%
+Bib\TeX}}}
+
+\title{Fast Wait-Free Parallel Breadth-First Search}
+
+\author{Aayush Kumar}
+\orcid{0009-0006-3720-6880}
+\email{aayush.k4562@gmail.com}
+
+\input{sections/abstract.tex}
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10010147.10010169.10010170.10010171</concept_id>
+       <concept_desc>Computing methodologies~Shared memory algorithms</concept_desc>
+       <concept_significance>500</concept_significance>
+   </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computing methodologies~Shared memory algorithms}
+
+\keywords{Breadth-first search (BFS), Direction-optimizing BFS, Wait-free algorithms, Helping, Parallel graph algorithms, Shared memory}
+
+
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\begin{document}
+
+\maketitle
+
+\input{sections/introduction.tex}
+\input{sections/background.tex}
+\input{sections/wf_topdown.tex}
+\input{sections/wf_dir_opt.tex}
+\input{sections/proof.tex}
+\input{sections/variants.tex}
+\input{sections/implementation.tex}
+\input{sections/experiments.tex}
+\input{sections/related_work.tex}
+\input{sections/conclusion.tex}
+
+\begin{acks}
+I thank Dr. Sathya Peri and Dr. Sandeep Kulkarni for their comments and suggestions on an earlier manuscript arising from this project.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\input{sections/appendix.tex}
+
+
+\end{document}

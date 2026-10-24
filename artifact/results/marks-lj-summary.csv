@@ -1,0 +1,5 @@
+placement,graph,threads,program,median_us,min_us,max_us,builds,failed
+both,lj,64,wd,5253,5179,5288,5,0
+both,lj,112,wd,4760,4476,6293,5,0
+both,lj,64,wdfenced,5305,5237,5380,5,0
+both,lj,112,wdfenced,5654,4566,6561,5,0

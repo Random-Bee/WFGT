@@ -1,0 +1,913 @@
+
+% Journals
+
+% First the Full Name is given, then the abbreviation used in the AMS Math
+% Reviews, with an indication if it could not be found there.
+% Note the 2nd overwrites the 1st, so swap them if you want the full name.
+
+ %{AMS}
+ @String{AMSTrans = "American Mathematical Society Translations" }
+ @String{AMSTrans = "Amer. Math. Soc. Transl." }
+ @String{BullAMS = "Bulletin of the American Mathematical Society" }
+ @String{BullAMS = "Bull. Amer. Math. Soc." }
+ @String{ProcAMS = "Proceedings of the American Mathematical Society" }
+ @String{ProcAMS = "Proc. Amer. Math. Soc." }
+ @String{TransAMS = "Transactions of the American Mathematical Society" }
+ @String{TransAMS = "Trans. Amer. Math. Soc." }
+
+ %ACM
+ @String{CACM = "Communications of the {ACM}" }
+ @String{CACM = "Commun. {ACM}" }
+ @String{CompServ = "Comput. Surveys" }
+ @String{JACM = "J. ACM" }
+ @String{ACMMathSoft = "{ACM} Transactions on Mathematical Software" }
+ @String{ACMMathSoft = "{ACM} Trans. Math. Software" }
+ @String{SIGNUM = "{ACM} {SIGNUM} Newsletter" }
+ @String{SIGNUM = "{ACM} {SIGNUM} Newslett." }
+
+ @String{AmerSocio = "American Journal of Sociology" }
+ @String{AmerStatAssoc = "Journal of the American Statistical Association" }
+ @String{AmerStatAssoc = "J. Amer. Statist. Assoc." }
+ @String{ApplMathComp = "Applied Mathematics and Computation" }
+ @String{ApplMathComp = "Appl. Math. Comput." }
+ @String{AmerMathMonthly = "American Mathematical Monthly" }
+ @String{AmerMathMonthly = "Amer. Math. Monthly" }
+ @String{BIT = "{BIT}" }
+ @String{BritStatPsych = "British Journal of Mathematical and Statistical
+          Psychology" }
+ @String{BritStatPsych = "Brit. J. Math. Statist. Psych." }
+ @String{CanMathBull = "Canadian Mathematical Bulletin" }
+ @String{CanMathBull = "Canad. Math. Bull." }
+ @String{CompApplMath = "Journal of Computational and Applied Mathematics" }
+ @String{CompApplMath = "J. Comput. Appl. Math." }
+ @String{CompPhys = "Journal of Computational Physics" }
+ @String{CompPhys = "J. Comput. Phys." }
+ @String{CompStruct = "Computers and Structures" }
+ @String{CompStruct = "Comput. \& Structures" }
+ @String{CompJour = "The Computer Journal" }
+ @String{CompJour = "Comput. J." }
+ @String{CompSysSci = "Journal of Computer and System Sciences" }
+ @String{CompSysSci = "J. Comput. System Sci." }
+ @String{Computing = "Computing" }
+ @String{ContempMath = "Contemporary Mathematics" }
+ @String{ContempMath = "Contemp. Math." }
+ @String{Crelle = "Crelle's Journal" }
+ @String{GiornaleMath = "Giornale di Mathematiche" }
+ @String{GiornaleMath = "Giorn. Mat." } % didn't find in AMS MR., ibid.
+
+ %IEEE
+ @String{Computer = "{IEEE} Computer" }
+ @String{IEEETransComp = "{IEEE} Transactions on Computers" }
+ @String{IEEETransComp = "{IEEE} Trans. Comput." }
+ @String{IEEETransAC = "{IEEE} Transactions on Automatic Control" }
+ @String{IEEETransAC = "{IEEE} Trans. Automat. Control" }
+ @String{IEEESpec = "{IEEE} Spectrum" } % didn't find in AMS MR
+ @String{ProcIEEE = "Proceedings of the {IEEE}" }
+ @String{ProcIEEE = "Proc. {IEEE}" } % didn't find in AMS MR
+ @String{IEEETransAeroElec = "{IEEE} Transactions on Aerospace and Electronic
+     Systems" }
+ @String{IEEETransAeroElec = "{IEEE} Trans. Aerospace Electron. Systems" }
+
+ @String{IMANumerAna = "{IMA} Journal of Numerical Analysis" }
+ @String{IMANumerAna = "{IMA} J. Numer. Anal." }
+ @String{InfProcLet = "Information Processing Letters" }
+ @String{InfProcLet = "Inform. Process. Lett." }
+ @String{InstMathApp = "Journal of the Institute of Mathematics and
+     its Applications" }
+ @String{InstMathApp = "J. Inst. Math. Appl." }
+ @String{IntControl = "International Journal of Control" }
+ @String{IntControl = "Internat. J. Control" }
+ @String{IntNumerEng = "International Journal for Numerical Methods in
+     Engineering" }
+ @String{IntNumerEng = "Internat. J. Numer. Methods Engrg." }
+ @String{IntSuper = "International Journal of Supercomputing Applications" }
+ @String{IntSuper = "Internat. J. Supercomputing Applic." } % didn't find
+%% in AMS MR
+ @String{Kibernetika = "Kibernetika" }
+ @String{JResNatBurStand = "Journal of Research of the National Bureau
+     of Standards" }
+ @String{JResNatBurStand = "J. Res. Nat. Bur. Standards" }
+ @String{LinAlgApp = "Linear Algebra and its Applications" }
+ @String{LinAlgApp = "Linear Algebra Appl." }
+ @String{MathAnaAppl = "Journal of Mathematical Analysis and Applications" }
+ @String{MathAnaAppl = "J. Math. Anal. Appl." }
+ @String{MathAnnalen = "Mathematische Annalen" }
+ @String{MathAnnalen = "Math. Ann." }
+ @String{MathPhys = "Journal of Mathematical Physics" }
+ @String{MathPhys = "J. Math. Phys." }
+ @String{MathComp = "Mathematics of Computation" }
+ @String{MathComp = "Math. Comp." }
+ @String{MathScand = "Mathematica Scandinavica" }
+ @String{MathScand = "Math. Scand." }
+ @String{TablesAidsComp = "Mathematical Tables and Other Aids to Computation" }
+ @String{TablesAidsComp = "Math. Tables Aids Comput." }
+ @String{NumerMath = "Numerische Mathematik" }
+ @String{NumerMath = "Numer. Math." }
+ @String{PacificMath = "Pacific Journal of Mathematics" }
+ @String{PacificMath = "Pacific J. Math." }
+ @String{ParDistComp = "Journal of Parallel and Distributed Computing" }
+ @String{ParDistComp = "J. Parallel and Distrib. Comput." } % didn't find
+%% in AMS MR
+ @String{ParComputing = "Parallel Computing" }
+ @String{ParComputing = "Parallel Comput." }
+ @String{PhilMag = "Philosophical Magazine" }
+ @String{PhilMag = "Philos. Mag." }
+ @String{ProcNAS = "Proceedings of the National Academy of Sciences
+                    of the USA" }
+ @String{ProcNAS = "Proc. Nat. Acad. Sci. U. S. A." }
+ @String{Psychometrika = "Psychometrika" }
+ @String{QuartMath = "Quarterly Journal of Mathematics, Oxford, Series (2)" }
+ @String{QuartMath = "Quart. J. Math. Oxford Ser. (2)" }
+ @String{QuartApplMath = "Quarterly of Applied Mathematics" }
+ @String{QuartApplMath = "Quart. Appl. Math." }
+ @String{RevueInstStat = "Review of the International Statisical Institute" }
+ @String{RevueInstStat = "Rev. Inst. Internat. Statist." }
+
+ %SIAM
+ @String{JSIAM = "Journal of the Society for Industrial and Applied
+     Mathematics" }
+ @String{JSIAM = "J. Soc. Indust. Appl. Math." }
+ @String{JSIAMB = "Journal of the Society for Industrial and Applied
+     Mathematics, Series B, Numerical Analysis" }
+ @String{JSIAMB = "J. Soc. Indust. Appl. Math. Ser. B Numer. Anal." }
+ @String{SIAMAlgMeth = "{SIAM} Journal on Algebraic and Discrete Methods" }
+ @String{SIAMAlgMeth = "{SIAM} J. Algebraic Discrete Methods" }
+ @String{SIAMAppMath = "{SIAM} Journal on Applied Mathematics" }
+ @String{SIAMAppMath = "{SIAM} J. Appl. Math." }
+ @String{SIAMComp = "{SIAM} Journal on Computing" }
+ @String{SIAMComp = "{SIAM} J. Comput." }
+ @String{SIAMMatrix = "{SIAM} Journal on Matrix Analysis and Applications" }
+ @String{SIAMMatrix = "{SIAM} J. Matrix Anal. Appl." }
+ @String{SIAMNumAnal = "{SIAM} Journal on Numerical Analysis" }
+ @String{SIAMNumAnal = "{SIAM} J. Numer. Anal." }
+ @String{SIAMReview = "{SIAM} Review" }
+ @String{SIAMReview = "{SIAM} Rev." }
+ @String{SIAMSciStat = "{SIAM} Journal on Scientific and Statistical
+     Computing" }
+ @String{SIAMSciStat = "{SIAM} J. Sci. Statist. Comput." }
+
+ @String{SoftPracExp = "Software Practice and Experience" }
+ @String{SoftPracExp = "Software Prac. Experience" } % didn't find in AMS MR
+ @String{StatScience = "Statistical Science" }
+ @String{StatScience = "Statist. Sci." }
+ @String{Techno = "Technometrics" }
+ @String{USSRCompMathPhys = "{USSR} Computational Mathematics and Mathematical
+     Physics" }
+ @String{USSRCompMathPhys = "{U. S. S. R.} Comput. Math. and Math. Phys." }
+ @String{VLSICompSys = "Journal of {VLSI} and Computer Systems" }
+ @String{VLSICompSys = "J. {VLSI} Comput. Syst." }
+ @String{ZAngewMathMech = "Zeitschrift fur Angewandte Mathematik und
+     Mechanik" }
+ @String{ZAngewMathMech = "Z. Angew. Math. Mech." }
+ @String{ZAngewMathPhys = "Zeitschrift fur Angewandte Mathematik und Physik" }
+ @String{ZAngewMathPhys = "Z. Angew. Math. Phys." }
+
+% Publishers % ================================================= |
+
+ @String{Academic = "Academic Press" }
+ @String{ACMPress = "{ACM} Press" }
+ @String{AdamHilger = "Adam Hilger" }
+ @String{AddisonWesley = "Addison-Wesley" }
+ @String{AllynBacon = "Allyn and Bacon" }
+ @String{AMS = "American Mathematical Society" }
+ @String{Birkhauser = "Birkh{\"a}user" }
+ @String{CambridgePress = "Cambridge University Press" }
+ @String{Chelsea = "Chelsea" }
+ @String{ClaredonPress = "Claredon Press" }
+ @String{DoverPub = "Dover Publications" }
+ @String{Eyolles = "Eyolles" }
+ @String{HoltRinehartWinston = "Holt, Rinehart and Winston" }
+ @String{Interscience = "Interscience" }
+ @String{JohnsHopkinsPress = "The Johns Hopkins University Press" }
+ @String{JohnWileySons = "John Wiley and Sons" }
+ @String{Macmillan = "Macmillan" }
+ @String{MathWorks = "The Math Works Inc." }
+ @String{McGrawHill = "McGraw-Hill" }
+ @String{NatBurStd = "National Bureau of Standards" }
+ @String{NorthHolland = "North-Holland" }
+ @String{OxfordPress = "Oxford University Press" }  %address Oxford or London?
+ @String{PergamonPress = "Pergamon Press" }
+ @String{PlenumPress = "Plenum Press" }
+ @String{PrenticeHall = "Prentice-Hall" }
+ @String{SIAMPub = "{SIAM} Publications" }
+ @String{Springer = "Springer-Verlag" }
+ @String{TexasPress = "University of Texas Press" }
+ @String{VanNostrand = "Van Nostrand" }
+ @String{WHFreeman = "W. H. Freeman and Co." }
+
+%Entries
+
+@inproceedings{bader_bfs,
+    author = {Bader, David A. and Madduri, Kamesh},
+    title = {Designing Multithreaded Algorithms for Breadth-First Search and st-connectivity on the {Cray MTA-2}},
+    booktitle = {Proceedings of the 2006 International Conference on Parallel Processing},
+    series = {ICPP '06},
+    year = {2006},
+    pages = {523--530},
+    publisher = {IEEE},
+    location = {Columbus, OH, USA},
+    doi = {10.1109/ICPP.2006.34}
+}
+
+@inproceedings{mizell_bfs,
+    author = {Mizell, David and Maschhoff, Kristyn},
+    title = {Early Experiences with Large-Scale {Cray XMT} Systems},
+    booktitle = {2009 IEEE International Symposium on Parallel \& Distributed Processing},
+    year = {2009},
+    month = may,
+    pages = {1--9},
+    doi = {10.1109/IPDPS.2009.5161108}
+}
+
+@inproceedings{buluc_madduri_bfs,
+    author = {Bulu\c{c}, Aydin and Madduri, Kamesh},
+    title = {Parallel breadth-first search on distributed memory systems},
+    year = {2011},
+    isbn = {9781450307710},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/2063384.2063471},
+    doi = {10.1145/2063384.2063471},
+    abstract = {Data-intensive, graph-based computations are pervasive in several scientific applications, and are known to to be quite challenging to implement on distributed memory systems. In this work, we explore the design space of parallel algorithms for Breadth-First Search (BFS), a key subroutine in several graph algorithms. We present two highly-tuned parallel approaches for BFS on large parallel systems: a level-synchronous strategy that relies on a simple vertex-based partitioning of the graph, and a two-dimensional sparse matrix partitioning-based approach that mitigates parallel communication overhead. For both approaches, we also present hybrid versions with intra-node multithreading. Our novel hybrid two-dimensional algorithm reduces communication times by up to a factor of 3.5, relative to a common vertex based approach. Our experimental study identifies execution regimes in which these approaches will be competitive, and we demonstrate extremely high performance on leading distributed-memory parallel systems. For instance, for a 40,000-core parallel execution on Hopper, an AMD Magny-Cours based system, we achieve a BFS performance rate of 17.8 billion edge visits per second on an undirected graph of 4.3 billion vertices and 68.7 billion edges with skewed degree distribution.},
+    booktitle = {Proceedings of 2011 International Conference for High Performance Computing, Networking, Storage and Analysis},
+    articleno = {65},
+    numpages = {12},
+    location = {Seattle, Washington},
+    series = {SC '11}
+}
+
+@inproceedings{charles_bfs,
+    author = {Leiserson, Charles E. and Schardl, Tao B.},
+    title = {A Work-Efficient Parallel Breadth-First Search Algorithm (or How to Cope with the Nondeterminism of Reducers)},
+    booktitle = {Proceedings of the 22nd ACM Symposium on Parallelism in Algorithms and Architectures},
+    series = {SPAA '10},
+    year = {2010},
+    pages = {303--314},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Thira, Santorini, Greece},
+    doi = {10.1145/1810479.1810534}
+}
+
+@misc{aditya_bfs,
+    author = {Nongmeikapam, Aditya},
+    title = {Parallel Breadth-First Search Using {MPI}},
+    year = {2022},
+    howpublished = {Course presentation, CSE633: Parallel Computing, University at Buffalo, Spring 2022},
+    url = {https://www.cse.buffalo.edu/faculty/miller/Courses/CSE633/Aditya-Nongmeikapam-Spring-2022.pdf}
+}
+
+@article{scarpazza_bfs,
+    author = {Scarpazza, Daniele Paolo and Villa, Oreste and Petrini, Fabrizio},
+    title = {Efficient Breadth-First Search on the {Cell/BE} Processor},
+    journal = {IEEE Transactions on Parallel and Distributed Systems},
+    volume = {19},
+    number = {10},
+    pages = {1381--1395},
+    year = {2008},
+    month = oct,
+    doi = {10.1109/TPDS.2007.70811}
+}
+
+@inproceedings{yoo_bfs,
+    author = {Yoo, Andy and Chow, Edmond and Henderson, Keith and McLendon, William and Hendrickson, Bruce and Catalyurek, Umit},
+    title = {A Scalable Distributed Parallel Breadth-First Search Algorithm on BlueGene/L},
+    year = {2005},
+    isbn = {1595930612},
+    publisher = {IEEE Computer Society},
+    address = {USA},
+    url = {https://doi.org/10.1109/SC.2005.4},
+    doi = {10.1109/SC.2005.4},
+    abstract = {Many emerging large-scale data science applications require searching large graphs distributed across multiple memories and processors. This paper presents a distributed breadth- first search (BFS) scheme that scales for random graphs with up to three billion vertices and 30 billion edges. Scalability was tested on IBM BlueGene/L with 32,768 nodes at the Lawrence Livermore National Laboratory. Scalability was obtained through a series of optimizations, in particular, those that ensure scalable use of memory. We use 2D (edge) partitioning of the graph instead of conventional 1D (vertex) partitioning to reduce communication overhead. For Poisson random graphs, we show that the expected size of the messages is scalable for both 2D and 1D partitionings. Finally, we have developed efficient collective communication functions for the 3D torus architecture of BlueGene/L that also take advantage of the structure in the problem. The performance and characteristics of the algorithm are measured and reported.},
+    booktitle = {Proceedings of the 2005 ACM/IEEE Conference on Supercomputing},
+    pages = {25},
+    series = {SC '05}
+}
+
+@INPROCEEDINGS{cong_bfs,
+    author={Cong, Guojing and Almasi, George and Saraswat, Vijay},
+    booktitle={SC '10: Proceedings of the 2010 ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis}, 
+    title={Fast PGAS Implementation of Distributed Graph Algorithms}, 
+    year={2010},
+    volume={},
+    number={},
+    pages={1-11},
+    keywords={Clustering algorithms;Electronics packaging;Algorithm design and analysis;Phase change random access memory;Instruction sets;Optimization},
+    doi={10.1109/SC.2010.26}
+}
+
+@inproceedings{edmond_bfs,
+    author = {Edmonds, Nicholas and Willcock, Jeremiah and Lumsdaine, Andrew and Hoefler, Torsten},
+    title = {Design of a Large-Scale Hybrid-Parallel Graph Library},
+    booktitle = {International Conference on High Performance Computing, Student Research Symposium},
+    year = {2010},
+    month = dec,
+    location = {Goa, India},
+    url = {https://htor.inf.ethz.ch/publications/?bibtex=119}
+}
+
+@misc{livejournal,
+    author       = {Jure Leskovec and Andrej Krevl},
+    title        = {{SNAP Datasets}: {Stanford} Large Network Dataset Collection},
+    howpublished = {\url{http://snap.stanford.edu/data}},
+    month        = jun,
+    year         = 2014
+}
+
+@misc{intelmanual,
+  author       = {{Intel Corporation}},
+  title        = {Intel\textsuperscript{\textregistered} 64 and IA-32 Architectures Software Developer's Manual, Volume 3 (3A, 3B, 3C \& 3D): System Programming Guide},
+  howpublished = {Order Number 325384-078US, December 2022},
+  month        = dec,
+  year         = {2022},
+  url          = {https://cdrdv2-public.intel.com/671447/325384-sdm-vol-3abcd.pdf}
+}
+
+@misc{amdmanual,
+  author       = {{Advanced Micro Devices, Inc.}},
+  title        = {{AMD64} Architecture Programmer's Manual, Volume 2: System Programming},
+  howpublished = {Publication No. 24593, Revision 3.39, October 2022},
+  month        = oct,
+  year         = {2022}
+}
+
+@article{challenges2,
+  author    = {Albert Segura and Jose Maria Arnau and Antonio Gonzalez},
+  title     = {Irregular accesses reorder unit: improving GPGPU memory coalescing for graph-based workloads},
+  journal   = {The Journal of Supercomputing},
+  year      = {2023},
+  volume    = {79},
+  number    = {1},
+  pages     = {762--787},
+  doi       = {10.1007/s11227-022-04621-1},
+  url       = {https://doi.org/10.1007/s11227-022-04621-1},
+  issn      = {1573-0484},
+}
+
+@book{aomp,
+author = {Herlihy, Maurice and Shavit, Nir},
+title = {The Art of Multiprocessor Programming, Revised Reprint},
+year = {2012},
+isbn = {9780123973375},
+publisher = {Morgan Kaufmann Publishers Inc.},
+address = {San Francisco, CA, USA},
+edition = {1st}
+}
+
+@inproceedings{graph500,
+    author = {Murphy, Richard C. and Wheeler, Kyle B. and Barrett, Brian W. and Ang, James A.},
+    title = {Introducing the {Graph} 500},
+    booktitle = {Cray User's Group (CUG)},
+    year = {2010},
+    month = may,
+    location = {Edinburgh, UK}
+}
+
+@inproceedings{beamer_dobfs,
+    author = {Beamer, Scott and Asanovi\'{c}, Krste and Patterson, David},
+    title = {Direction-Optimizing Breadth-First Search},
+    booktitle = {Proceedings of the International Conference on High Performance Computing, Networking, Storage and Analysis},
+    series = {SC '12},
+    year = {2012},
+    articleno = {12},
+    numpages = {10},
+    publisher = {IEEE},
+    location = {Salt Lake City, UT, USA},
+    doi = {10.1109/SC.2012.50}
+}
+
+@misc{gapbs,
+    author = {Beamer, Scott and Asanovi\'{c}, Krste and Patterson, David},
+    title = {The {GAP} Benchmark Suite},
+    year = {2015},
+    eprint = {1508.03619},
+    archiveprefix = {arXiv},
+    primaryclass = {cs.DC}
+}
+
+@inproceedings{ligra,
+    author = {Shun, Julian and Blelloch, Guy E.},
+    title = {Ligra: A Lightweight Graph Processing Framework for Shared Memory},
+    booktitle = {Proceedings of the 18th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+    series = {PPoPP '13},
+    year = {2013},
+    pages = {135--146},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Shenzhen, China},
+    doi = {10.1145/2442516.2442530}
+}
+
+@article{gbbs,
+    author = {Dhulipala, Laxman and Blelloch, Guy E. and Shun, Julian},
+    title = {Theoretically Efficient Parallel Graph Algorithms Can Be Fast and Scalable},
+    journal = {ACM Trans. Parallel Comput.},
+    volume = {8},
+    number = {1},
+    articleno = {4},
+    numpages = {70},
+    year = {2021},
+    doi = {10.1145/3434393}
+}
+
+@inproceedings{pasgal,
+    author = {Dong, Xiaojun and Gu, Yan and Sun, Yihan and Wang, Letong},
+    title = {Brief Announcement: {PASGAL}: Parallel And Scalable Graph Algorithm Library},
+    booktitle = {Proceedings of the 36th ACM Symposium on Parallelism in Algorithms and Architectures},
+    series = {SPAA '24},
+    year = {2024},
+    pages = {439--441},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Nantes, France},
+    doi = {10.1145/3626183.3660258}
+}
+
+@article{blumofe_workstealing,
+    author = {Blumofe, Robert D. and Leiserson, Charles E.},
+    title = {Scheduling Multithreaded Computations by Work Stealing},
+    journal = {Journal of the ACM},
+    volume = {46},
+    number = {5},
+    year = {1999},
+    pages = {720--748},
+    doi = {10.1145/324133.324234}
+}
+
+@inproceedings{petrini_noise,
+    author = {Petrini, Fabrizio and Kerbyson, Darren J. and Pakin, Scott},
+    title = {The Case of the Missing Supercomputer Performance: Achieving Optimal Performance on the 8,192 Processors of {ASCI Q}},
+    booktitle = {Proceedings of the 2003 ACM/IEEE Conference on Supercomputing},
+    series = {SC '03},
+    year = {2003},
+    pages = {55},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Phoenix, AZ, USA},
+    doi = {10.1145/1048935.1050204}
+}
+
+@inproceedings{hoefler_noise,
+    author = {Hoefler, Torsten and Schneider, Timo and Lumsdaine, Andrew},
+    title = {Characterizing the Influence of System Noise on Large-Scale Applications by Simulation},
+    booktitle = {Proceedings of the 2010 ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis},
+    series = {SC '10},
+    year = {2010},
+    pages = {1--11},
+    publisher = {IEEE},
+    location = {New Orleans, LA, USA},
+    doi = {10.1109/SC.2010.12}
+}
+
+@inproceedings{parlaylib,
+    author = {Blelloch, Guy E. and Anderson, Daniel and Dhulipala, Laxman},
+    title = {Brief Announcement: {ParlayLib} -- A Toolkit for Parallel Algorithms on Shared-Memory Multicore Machines},
+    booktitle = {Proceedings of the 32nd ACM Symposium on Parallelism in Algorithms and Architectures},
+    series = {SPAA '20},
+    year = {2020},
+    pages = {507--509},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Virtual Event, USA},
+    doi = {10.1145/3350755.3400254}
+}
+
+@inproceedings{xbfs,
+    author = {Gaihre, Anil and Wu, Zhenlin and Yao, Fan and Liu, Hang},
+    title = {{XBFS}: {eXploring} Runtime Optimizations for Breadth-First Search on {GPUs}},
+    booktitle = {Proceedings of the 28th International Symposium on High-Performance Parallel and Distributed Computing},
+    series = {HPDC '19},
+    year = {2019},
+    pages = {121--131},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Phoenix, AZ, USA},
+    doi = {10.1145/3307681.3326606}
+}
+
+@mastersthesis{holst_unordered,
+    author = {Holst, Simon and Selin, Johan},
+    title = {A Faster Breadth-First Search on Sparse Graphs},
+    school = {Chalmers University of Technology},
+    address = {Gothenburg, Sweden},
+    type = {Master's thesis},
+    year = {2025},
+    url = {https://hdl.handle.net/20.500.12380/310782}
+}
+
+@inproceedings{michael_iws,
+    author = {Michael, Maged M. and Vechev, Martin T. and Saraswat, Vijay A.},
+    title = {Idempotent Work Stealing},
+    booktitle = {Proceedings of the 14th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+    series = {PPoPP '09},
+    year = {2009},
+    pages = {45--54},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Raleigh, NC, USA},
+    doi = {10.1145/1504176.1504186}
+}
+
+@inproceedings{pearce_async,
+    author = {Pearce, Roger A. and Gokhale, Maya B. and Amato, Nancy M.},
+    title = {Multithreaded Asynchronous Graph Traversal for In-Memory and Semi-External Memory},
+    booktitle = {Proceedings of the 2010 ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis},
+    series = {SC '10},
+    year = {2010},
+    pages = {1--11},
+    publisher = {IEEE},
+    location = {New Orleans, LA, USA},
+    doi = {10.1109/SC.2010.34}
+}
+
+@inproceedings{kwak_twitter,
+    author = {Kwak, Haewoon and Lee, Changhyun and Park, Hosung and Moon, Sue},
+    title = {What is {Twitter}, a Social Network or a News Media?},
+    booktitle = {Proceedings of the 19th International Conference on World Wide Web},
+    series = {WWW '10},
+    year = {2010},
+    pages = {591--600},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Raleigh, NC, USA},
+    doi = {10.1145/1772690.1772751}
+}
+
+@inproceedings{boldi_webgraph,
+    author = {Boldi, Paolo and Vigna, Sebastiano},
+    title = {The {WebGraph} Framework {I}: Compression Techniques},
+    booktitle = {Proceedings of the 13th International Conference on World Wide Web},
+    series = {WWW '04},
+    year = {2004},
+    pages = {595--602},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {New York, NY, USA},
+    doi = {10.1145/988672.988752}
+}
+
+@article{davis_suitesparse,
+    author = {Davis, Timothy A. and Hu, Yifan},
+    title = {The {University of Florida} Sparse Matrix Collection},
+    journal = {ACM Transactions on Mathematical Software},
+    volume = {38},
+    number = {1},
+    articleno = {1},
+    numpages = {25},
+    year = {2011},
+    doi = {10.1145/2049662.2049663}
+}
+
+@inproceedings{netrepo,
+    author = {Rossi, Ryan A. and Ahmed, Nesreen K.},
+    title = {The Network Data Repository with Interactive Graph Analytics and Visualization},
+    booktitle = {Proceedings of the 29th AAAI Conference on Artificial Intelligence},
+    series = {AAAI '15},
+    year = {2015},
+    doi = {10.1609/aaai.v29i1.9277},
+    url = {https://networkrepository.com}
+}
+
+@article{x86tso,
+    author = {Sewell, Peter and Sarkar, Susmit and Owens, Scott and Zappa Nardelli, Francesco and Myreen, Magnus O.},
+    title = {x86-{TSO}: A Rigorous and Usable Programmer's Model for x86 Multiprocessors},
+    journal = {Communications of the ACM},
+    volume = {53},
+    number = {7},
+    year = {2010},
+    pages = {89--97},
+    doi = {10.1145/1785414.1785443}
+}
+
+@inproceedings{boehm_cpp,
+    author = {Boehm, Hans-J. and Adve, Sarita V.},
+    title = {Foundations of the {C++} Concurrency Memory Model},
+    booktitle = {Proceedings of the 29th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+    series = {PLDI '08},
+    year = {2008},
+    pages = {68--78},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/1375581.1375591}
+}
+
+@manual{cppstd,
+    author = {{International Organization for Standardization}},
+    title = {{ISO/IEC} 14882:2024, Programming Languages -- {C++}},
+    year = {2024},
+    note = {The {C++23} standard}
+}
+
+@inproceedings{boehm_benign,
+    author = {Boehm, Hans-J.},
+    title = {How to Miscompile Programs with ``Benign'' Data Races},
+    booktitle = {Proceedings of the 3rd USENIX Workshop on Hot Topics in Parallelism},
+    series = {HotPar '11},
+    year = {2011},
+    publisher = {USENIX Association},
+    address = {Berkeley, CA, USA}
+}
+
+@article{herlihy_waitfree,
+    author = {Herlihy, Maurice},
+    title = {Wait-Free Synchronization},
+    journal = {ACM Trans. Program. Lang. Syst.},
+    volume = {13},
+    number = {1},
+    year = {1991},
+    pages = {124--149},
+    doi = {10.1145/114005.102808}
+}
+
+@inproceedings{kogan_fastwf,
+    author = {Kogan, Alex and Petrank, Erez},
+    title = {A Methodology for Creating Fast Wait-Free Data Structures},
+    booktitle = {Proceedings of the 17th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+    series = {PPoPP '12},
+    year = {2012},
+    pages = {141--150},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {New Orleans, LA, USA},
+    doi = {10.1145/2145816.2145835}
+}
+@inproceedings{nikolaev_wcq,
+    author = {Nikolaev, Ruslan and Ravindran, Binoy},
+    title = {{wCQ}: A Fast Wait-Free Queue with Bounded Memory Usage},
+    booktitle = {Proceedings of the 34th ACM Symposium on Parallelism in Algorithms and Architectures},
+    series = {SPAA '22},
+    year = {2022},
+    pages = {307--319},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    location = {Philadelphia, PA, USA},
+    doi = {10.1145/3490148.3538572}
+}
+@article{nikolaev_crystalline,
+    author = {Nikolaev, Ruslan and Ravindran, Binoy},
+    title = {A Family of Fast and Memory Efficient Lock- and Wait-Free Reclamation},
+    journal = {Proc. ACM Program. Lang.},
+    volume = {8},
+    number = {PLDI},
+    articleno = {235},
+    numpages = {25},
+    year = {2024},
+    doi = {10.1145/3658851}
+}
+
+@article{vgc_hashbag,
+    author = {Wang, Letong and Dong, Xiaojun and Gu, Yan and Sun, Yihan},
+    title = {Parallel Strong Connectivity Based on Faster Reachability},
+    journal = {Proc. ACM Manag. Data},
+    volume = {1},
+    number = {2},
+    articleno = {114},
+    numpages = {29},
+    year = {2023},
+    doi = {10.1145/3589259}
+}
+
+% the OPODIS 2015 proceedings came out in 2016, the year the publisher's entry gives
+@inproceedings{kallimanis_graph,
+    author = {Kallimanis, Nikolaos D. and Kanellou, Eleni},
+    title = {Wait-Free Concurrent Graph Objects with Dynamic Traversals},
+    booktitle = {19th International Conference on Principles of Distributed Systems (OPODIS 2015)},
+    series = {Leibniz International Proceedings in Informatics (LIPIcs)},
+    volume = {46},
+    year = {2016},
+    pages = {27:1--27:17},
+    publisher = {Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
+    address = {Dagstuhl, Germany},
+    location = {Rennes, France},
+    doi = {10.4230/LIPIcs.OPODIS.2015.27}
+}
+
+@inproceedings{graph_snapshots,
+    author = {Bhardwaj, Gaurav and Ahmed, Ayaz and Peri, Sathya},
+    title = {Concurrent Wait-Free Graph Snapshots Using Multi-versioning},
+    booktitle = {Networked Systems: 12th International Conference, NETYS 2024},
+    series = {Lecture Notes in Computer Science},
+    volume = {14783},
+    year = {2024},
+    pages = {32--49},
+    publisher = {Springer},
+    address = {Cham, Switzerland},
+    location = {Rabat, Morocco},
+    doi = {10.1007/978-3-031-67321-4_2}
+}
+
+@article{kanellakis_robust,
+    author = {Kanellakis, Paris C. and Shvartsman, Alex A.},
+    title = {Efficient Parallel Algorithms Can Be Made Robust},
+    journal = {Distrib. Comput.},
+    volume = {5},
+    number = {4},
+    year = {1992},
+    pages = {201--217},
+    doi = {10.1007/BF02277667}
+}
+
+@inproceedings{kanellakis_restartable,
+    author = {Kanellakis, Paris C. and Shvartsman, Alex A.},
+    title = {Efficient Parallel Algorithms on Restartable Fail-Stop Processors},
+    booktitle = {Proceedings of the 10th Annual ACM Symposium on Principles of Distributed Computing},
+    series = {PODC '91},
+    year = {1991},
+    pages = {23--36},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/112600.112603}
+}
+
+@book{kanellakis_book,
+    author = {Kanellakis, Paris C. and Shvartsman, Alex A.},
+    title = {Fault-Tolerant Parallel Computation},
+    series = {The Springer International Series in Engineering and Computer Science},
+    volume = {401},
+    year = {1997},
+    publisher = {Kluwer Academic Publishers},
+    address = {Boston, MA, USA},
+    isbn = {978-0-7923-9922-3},
+    doi = {10.1007/978-1-4757-5210-6}
+}
+
+@book{georgiou_doall,
+    author = {Georgiou, Chryssis and Shvartsman, Alex A.},
+    title = {Do-All Computing in Distributed Systems: Cooperation in the Presence of Adversity},
+    year = {2008},
+    publisher = {Springer},
+    address = {New York, NY, USA},
+    isbn = {978-0-387-30918-7},
+    doi = {10.1007/978-0-387-69045-2}
+}
+
+@inproceedings{anderson_woll_uf,
+    author = {Anderson, Richard J. and Woll, Heather},
+    title = {Wait-Free Parallel Algorithms for the Union-Find Problem},
+    booktitle = {Proceedings of the 23rd Annual ACM Symposium on Theory of Computing},
+    series = {STOC '91},
+    year = {1991},
+    pages = {370--380},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/103418.103458}
+}
+
+@article{anderson_woll_cwa,
+    author = {Anderson, Richard J. and Woll, Heather},
+    title = {Algorithms for the Certified Write-All Problem},
+    journal = {SIAM Journal on Computing},
+    volume = {26},
+    number = {5},
+    year = {1997},
+    pages = {1277--1283},
+    doi = {10.1137/S0097539794319126}
+}
+
+@article{martel_cwa,
+    author = {Martel, Charles U. and Subramonian, Ramesh},
+    title = {On the Complexity of Certified Write-All Algorithms},
+    journal = {J. Algorithms},
+    volume = {16},
+    number = {3},
+    year = {1994},
+    pages = {361--387},
+    doi = {10.1006/jagm.1994.1017}
+}
+
+@article{kanold_jacobsthal,
+    author = {Kanold, H. J.},
+    title = {{\"U}ber eine zahlentheoretische {F}unktion von {J}acobsthal},
+    journal = {Mathematische Annalen},
+    volume = {170},
+    number = {4},
+    year = {1967},
+    pages = {314--326},
+    doi = {10.1007/BF01350607}
+}
+
+@article{martel_apram,
+    author = {Martel, Charles U. and Park, Arvin and Subramonian, Ramesh},
+    title = {Work-Optimal Asynchronous Algorithms for Shared Memory Parallel Computers},
+    journal = {SIAM Journal on Computing},
+    volume = {21},
+    number = {6},
+    year = {1992},
+    pages = {1070--1099},
+    doi = {10.1137/0221063}
+}
+
+@article{buss_failures,
+    author = {Buss, Jonathan F. and Kanellakis, Paris C. and Ragde, Prabhakar L. and Shvartsman, Alex A.},
+    title = {Parallel Algorithms with Processor Failures and Delays},
+    journal = {J. Algorithms},
+    volume = {20},
+    number = {1},
+    year = {1996},
+    pages = {45--86},
+    doi = {10.1006/jagm.1996.0003}
+}
+
+@article{kowalski_writeall,
+    author = {Kowalski, Dariusz R. and Shvartsman, Alex A.},
+    title = {Writing-All Deterministically and Optimally Using a Nontrivial Number of Asynchronous Processors},
+    journal = {ACM Trans. Algorithms},
+    volume = {4},
+    number = {3},
+    year = {2008},
+    pages = {33:1--33:22},
+    doi = {10.1145/1367064.1367073}
+}
+
+@inproceedings{chlebus_writeall,
+    author = {Chlebus, Bogdan S. and Kowalski, Dariusz R.},
+    title = {Cooperative Asynchronous Update of Shared Memory},
+    booktitle = {Proceedings of the 37th Annual ACM Symposium on Theory of Computing},
+    series = {STOC '05},
+    year = {2005},
+    pages = {733--739},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/1060590.1060698}
+}
+
+@inproceedings{malewicz_cwa,
+    author = {Malewicz, Grzegorz},
+    title = {A Work-Optimal Deterministic Algorithm for the Asynchronous Certified Write-All Problem},
+    booktitle = {Proceedings of the 22nd Annual Symposium on Principles of Distributed Computing},
+    series = {PODC '03},
+    year = {2003},
+    pages = {255--264},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/872035.872075}
+}
+
+@article{georgiou_iterative,
+    author = {Georgiou, Chryssis and Russell, Alexander and Shvartsman, Alex A.},
+    title = {The Complexity of Synchronous Iterative {Do-All} with Crashes},
+    journal = {Distrib. Comput.},
+    volume = {17},
+    number = {1},
+    year = {2004},
+    pages = {47--63},
+    doi = {10.1007/s00446-003-0099-3}
+}
+
+@inproceedings{cole_apram,
+    author = {Cole, Richard and Zajicek, Ofer},
+    title = {The {APRAM}: Incorporating Asynchrony into the {PRAM} Model},
+    booktitle = {Proceedings of the First Annual ACM Symposium on Parallel Algorithms and Architectures},
+    series = {SPAA '89},
+    year = {1989},
+    pages = {169--178},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/72935.72954}
+}
+
+@inproceedings{gibbons_apram,
+    author = {Gibbons, Phillip B.},
+    title = {A More Practical {PRAM} Model},
+    booktitle = {Proceedings of the First Annual ACM Symposium on Parallel Algorithms and Architectures},
+    series = {SPAA '89},
+    year = {1989},
+    pages = {158--168},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/72935.72953}
+}
+
+@inproceedings{nishimura_async,
+    author = {Nishimura, Naomi},
+    title = {Asynchronous Shared Memory Parallel Computation},
+    booktitle = {Proceedings of the Second Annual ACM Symposium on Parallel Algorithms and Architectures},
+    series = {SPAA '90},
+    year = {1990},
+    pages = {76--84},
+    publisher = {ACM},
+    address = {New York, NY, USA},
+    doi = {10.1145/97444.97672}
+}
+
+@article{flp,
+    author = {Fischer, Michael J. and Lynch, Nancy A. and Paterson, Michael S.},
+    title = {Impossibility of Distributed Consensus with One Faulty Process},
+    journal = {Journal of the ACM},
+    volume = {32},
+    number = {2},
+    year = {1985},
+    pages = {374--382},
+    doi = {10.1145/3149.214121}
+}
+
+@article{herlihy_shavit_topology,
+    author = {Herlihy, Maurice and Shavit, Nir},
+    title = {The Topological Structure of Asynchronous Computability},
+    journal = {Journal of the ACM},
+    volume = {46},
+    number = {6},
+    year = {1999},
+    pages = {858--923},
+    doi = {10.1145/331524.331529}
+}

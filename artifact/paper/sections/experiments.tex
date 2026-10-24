@@ -1,0 +1,544 @@
+\section{Experiments}
+\label{sec:experiments}
+
+We compare our method with three of the fastest BFS implementations for shared memory, GAPBS, GBBS and PASGAL, on five standard graphs and on a sixth that makes vertices of high degree costly, without stalls (Section~\ref{sec:exp-speed}) and with threads stalled on purpose (Section~\ref{sec:exp-stalls}); we also count the work that our method repeats (Section~\ref{sec:exp-work}), and split the gap between it and GAPBS, which runs the same algorithm, into a traversal term and bookkeeping (Section~\ref{sec:exp-speedup}). We call the method of Section~\ref{sec:dir-opt} \wfdo, and the variant of Section~\ref{sec:variants} \wfdomem.
+
+\subsection{Setup}
+\label{sec:exp-setup}
+
+\paragraph{Machine and programs.} We ran every experiment on an otherwise idle machine with two Intel Xeon Platinum 8592V processors, each with 64 cores, one hardware thread per core, and 256GB of memory, under Linux 4.18. We compare against the direction-optimizing BFS of GAPBS~\cite{gapbs} (commit 2972aeb), which uses OpenMP, and the BFS implementations of GBBS~\cite{gbbs} (commit bd48872) and PASGAL~\cite{pasgal} (commit f7817ba), which use the work-stealing scheduler of ParlayLib~\cite{parlaylib}, at commit 352f536 for GBBS and in the copy at c655b8f that PASGAL includes. The sequential baseline is the direction-optimizing BFS of GAPBS without threads. Each program is a single file that holds the BFS of its library, with the parts of the library's support code that the BFS uses. We changed only how the programs read graphs, place their threads, and time searches, and what they output and return: GAPBS and GBBS store each vertex's depth where they stored its parent, so that every program computes distances, as PASGAL does already. All programs, ours included, read graphs with the same loader, and search the same CSR, in which every edge of the input is stored at both of its ends, duplicates included.
+
+\paragraph{Builds and schedulers.} We built every program with GCC 15.2.1, C++23, \texttt{-O3 -march=native -DNDEBUG}, frame pointers, and loops and jump targets aligned to 32 bytes. GAPBS uses the system libgomp, whose default is \texttt{OMP\_WAIT\_POLICY=PASSIVE} with a spin count of zero; we set \texttt{GOMP\_SPINCOUNT=300000}, upstream libgomp's default, so that a worker at a barrier spins for a bounded time and then sleeps. Every program pins each worker to a CPU itself, so \texttt{OMP\_PROC\_BIND} does not affect the placement. GBBS and PASGAL use ParlayLib's scheduler defaults, including elastic parallelism and its 10~ms steal timeout.
+
+\begin{table}
+    \caption{The graphs, with their numbers of vertices and of input edges, each of which the searches store at both ends, and the number of levels of a search from vertex 0 that hold vertices, $D+1$.}
+    \label{tab:graphs}
+    \small
+    \begin{tabular}{l r r r}
+        \toprule
+        Graph & Vertices & Edges & Levels \\
+        \midrule
+        LiveJournal~\cite{livejournal} & 4,847,571 & 68,475,391 & 12 \\
+        Twitter~\cite{kwak_twitter} & 41,652,230 & 1,468,365,182 & 17 \\
+        Road-USA~\cite{netrepo} & 23,947,347 & 28,854,312 & 6,262 \\
+        uk-2002~\cite{boldi_webgraph, davis_suitesparse} & 18,520,486 & 298,113,762 & 29 \\
+        Kronecker~\cite{gapbs, graph500} & 33,554,432 & 523,609,147 & 8 \\
+        Hubs (Section~\ref{sec:exp-hubs}) & 25,200,513 & 50,400,008 & 128 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Graphs.} Table~\ref{tab:graphs} lists the graphs: the social networks LiveJournal and Twitter, the web graph uk-2002, the road network of the USA, and a Kronecker graph with $2^{25}$ vertices that the generator of GAPBS builds with the parameters of Graph500, drawing its default of 16 edges per vertex and dropping self-loops and repeats; if vertex 0 is outside its largest component, we swap its label with that of a vertex inside. We call these five the \emph{standard graphs}; all but the road network have low diameter. With $D$ the largest distance from vertex 0, a search has $D+1$ levels that hold vertices, which Table~\ref{tab:graphs} counts; GAPBS takes one step for each, and our methods also go through the empty level $D+1$. The sixth graph, of hubs, joins a root to the first of 64 layers of 8 hubs each, and puts between consecutive layers 400,000 spokes, each joined to a random hub of each of the two layers, so that after the root, levels of 8 hubs of about 50,000 to 100,000 neighbors alternate with levels of 400,000 spokes of degree two. Section~\ref{sec:exp-deep} adds a path of 10,000 vertices.
+
+\paragraph{Placement and method.} Each run uses both NUMA nodes: its threads are split evenly between them, each pinned to an idle CPU of its own, and memory is interleaved over both, even with one thread, which runs on one socket. Our threads visit the entries of other threads on their own NUMA node first (Section~\ref{sec:impl}). We run 1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112 and 128 threads; at 128, the workers take every core and leave none to the operating system. Where a program's code lands in memory changes its time by up to 5\%, so we build every program five times, shifting its code by 0 to 256 bytes in steps of 64. A build loads its graph once and, for each thread count in turn, rests for one to three seconds and runs 20 searches from vertex 0; the mean of the 20 is the build's time, each plotted point is the median of the five builds, and its error bar spans the fastest and slowest builds. Every build's distances were those of the sequential baseline: a build compares the distances of each thread count with those of the first, and our scripts compare those of its last with the baseline's.
+
+\paragraph{Timing.} The threads of every program live across searches. For GAPBS and GBBS, a search is a call of their BFS, which allocates and fills its output and returns after its last parallel loop has joined; PASGAL's BFS reuses arrays that it set up once. A search of our methods starts when the main thread begins to set up its first level, includes the reset of the arrays, which every thread waits for, and ends when the first call returns, when the distances are final (Section~\ref{sec:bg-method}). Our threads pin themselves to their CPUs just before the first search, which can therefore wait for the last of them; the first of the 20 searches is included in every program's mean.
+
+\subsection{Without Stalls}
+\label{sec:exp-speed}
+
+\begin{table*}
+    \caption{Each program's best median time, in ms per search, over 1 to 128 threads on two sockets, with the thread count in parentheses. The fastest program on each graph is in bold; on uk-2002, our two methods are within 0.1\% of each other. The best thread counts, and the ratios in the text, come from the unrounded medians.}
+    \label{tab:best}
+    \small
+    \begin{tabular}{l r r r r r r}
+        \toprule
+        Graph & Sequential & \wfdo & \wfdomem & GAPBS & GBBS & PASGAL \\
+        \midrule
+        LiveJournal & 96.2 & \textbf{4.2} (112) & 4.5 (112) & 5.4 (112) & 6.7 (112) & 9.2 (128) \\
+        Twitter & 3038.2 & 43.6 (128) & \textbf{43.1} (128) & 55.7 (112) & 89.0 (112) & 121.3 (128) \\
+        Road-USA & 851.3 & 113.7 (48) & \textbf{94.4} (48) & 273.4 (24) & 1273.3 (32) & 147.2 (112) \\
+        uk-2002 & 1183.7 & \textbf{25.4} (112) & \textbf{25.4} (96) & 37.1 (112) & 40.1 (96) & 84.3 (112) \\
+        Kronecker & 985.5 & 13.3 (128) & \textbf{13.1} (128) & 23.2 (112) & 38.0 (112) & 77.0 (128) \\
+        Hubs & 1463.9 & 64.5 (128) & \textbf{61.8} (128) & 332.7 (48) & 90.1 (112) & 141.5 (112) \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+\pgfplotsset{
+    wfdo/.style={blue, mark=*},
+    wfdomem/.style={cyan!70!black, mark=square*, densely dashed},
+    gapbs/.style={red, mark=triangle*},
+    gbbs/.style={orange!85!black, mark=diamond*},
+    pasgal/.style={green!50!black, mark=pentagon*},
+    seq/.style={black, densely dotted, no marks, line width=0.8pt},
+    nohelpstall/.style={violet, mark=o, densely dashed},
+    nohelp/.style={gray!70!black, mark=x, dashdotted},
+}
+
+\input{sections/data.tex}
+
+\begin{figure*}
+    \centering
+    \pgfplotsset{
+        scaling/.style={
+            scale only axis, width=4.5cm, height=3.3cm,
+            xmode=log, log basis x=2, xtick={1,2,4,8,16,32,64,112}, xticklabels={1,2,4,8,16,32,64,112},
+            ymode=log, unbounded coords=jump,
+            log ticks with fixed point, /pgf/number format/1000 sep={},
+            ytick={1,2,5,10,20,50,100,200,500,1000,2000,5000,10000},
+            tick label style={font=\footnotesize}, label style={font=\footnotesize},
+            title style={font=\small, yshift=-0.6ex},
+            grid=major, grid style={gray!25},
+            every axis plot/.append style={line width=0.7pt, mark size=1.4pt},
+        },
+    }
+    % the last row of each table, 128 threads, is left out of the plots
+    \newcommand{\scalingplot}[3]{\addplot[#1, skip coords between index={14}{15}, error bars/.cd, y dir=both, y explicit] table[x=t, y=#2, y error minus=#2minus, y error plus=#2plus] {#3};}
+    \newcommand{\scalingplots}[3]{\scalingplot{wfdo}{wd}{#1}\scalingplot{wfdomem}{mem}{#1}\scalingplot{gapbs}{gapbs}{#1}\scalingplot{gbbs}{gbbs}{#1}\scalingplot{pasgal}{pasgal}{#1}\addplot[seq] coordinates {(1,#2) (#3,#2)};}
+    \begin{tikzpicture}
+    \begin{groupplot}[
+        group style={group size=3 by 2, horizontal sep=1.3cm, vertical sep=1.4cm, xlabels at=edge bottom, ylabels at=edge left},
+        scaling, xlabel={Threads}, ylabel={Time (ms)},
+    ]
+    \nextgroupplot[title={LiveJournal}, legend to name=scalinglegend, legend columns=6, legend style={font=\small, draw=none, /tikz/every even column/.append style={column sep=0.8em}}]
+    \scalingplots{\dataTwoLJ}{\seqLJ}{112}
+    \legend{\wfdo, \wfdomem, GAPBS, GBBS, PASGAL, Sequential}
+    \nextgroupplot[title={Twitter}]
+    \scalingplots{\dataTwoTwitter}{\seqTwitter}{112}
+    \nextgroupplot[title={Road-USA}]
+    \scalingplots{\dataTwoRoad}{\seqRoad}{112}
+    \nextgroupplot[title={uk-2002}]
+    \scalingplots{\dataTwoUK}{\seqUK}{112}
+    \nextgroupplot[title={Kronecker}]
+    \scalingplots{\dataTwoKron}{\seqKron}{112}
+    \nextgroupplot[title={Hubs}]
+    \scalingplots{\dataTwoHubs}{\seqHubs}{112}
+    \end{groupplot}
+    \end{tikzpicture}
+    \vspace{0.5ex}
+    \pgfplotslegendfromname{scalinglegend}
+    \caption{Median time per search against the number of threads, from 1 to 112, with threads and memory spread over both sockets, on the five standard graphs and on the graph of hubs of Section~\ref{sec:exp-hubs}. Both axes are logarithmic; the dotted line is the sequential baseline, and each error bar spans the fastest and slowest of the five builds. The times at 128 threads, at which every core has a worker, are in Appendix~\ref{sec:app-times}.}
+    \Description{Six plots, in two rows of three, of search time against thread count from 1 to 112, one per graph, for the five parallel programs and the sequential baseline, all on two sockets.}
+    \label{fig:scaling}
+\end{figure*}
+
+Table~\ref{tab:best} gives each program's best time, and Figure~\ref{fig:scaling} its time at every thread count up to 112; Appendix~\ref{sec:app-times} lists all the times. Our two methods are the fastest programs on every graph. Over the five standard graphs, the best time of GAPBS is 1.58$\times$ that of \wfdo in the geometric mean, that of GBBS 2.77$\times$, and that of PASGAL 2.73$\times$, and at its best, \wfdo is 23 to 74 times faster than the sequential baseline on the graphs of low diameter. The exceptions are mostly at small thread counts: at one thread, where \wfdo takes 1.00 to 1.39$\times$ as long as the sequential baseline on the standard graphs, GAPBS is faster than \wfdo on LiveJournal, uk-2002 and Road-USA, by 9, 1 and 17\%, and on LiveJournal also at two threads, by 0.5\%, and up to 32 threads it is up to 11\% faster on Twitter; on the graph of hubs, GAPBS is faster up to 8 threads, by up to 35\%, and GBBS up to 16, by up to 15\%. From 40 threads on, \wfdo is faster than GAPBS on every graph, and GBBS and PASGAL are slower than \wfdo at every count up to 112 threads on the graphs of low diameter. On Road-USA, with its 6,262 levels, both of our methods are at their fastest at 48 threads, 7.5 and 9.0 times faster than the sequential baseline, and get slower beyond, as the cost of the levels takes over (Section~\ref{sec:exp-deep}); PASGAL keeps improving up to 112 threads, at which it is faster than \wfdo but not than \wfdomem, and GBBS is slower than the sequential baseline at every count.
+
+\paragraph{The variant with two nodes.} \wfdomem takes about as long as \wfdo on the graphs of low diameter, within 1.9\% through 112 threads, or up to 5.3\% longer on LiveJournal; on Road-USA, where \wfdo allocates a node for each of its 6,263 levels and \wfdomem reuses two, it takes 11 to 28\% less time at every count.
+
+\paragraph{All cores and the reset.} Table~\ref{tab:best} takes each program's best median over all counts, 128 threads included, at which every core has a worker, so that any other work on the machine, even that of the operating system, takes a core from some worker. The slowest of the five builds is then 15.5\% slower than the fastest in the median over programs and graphs, against 4.4\% at 112, and in builds that report how long a worker is ready to run but has no core, in the median of three runs per graph, that time grows from 112 to 128 threads, to up to 1.9~ms per search for \wfdo, 23~ms for GAPBS and 41~ms for GBBS, and unevenly: on LiveJournal, the worker that waits the longest waits 2.4~ms per search, against a mean of 0.06~ms for \wfdo. GAPBS, each of whose barriers waits for any worker that has lost its core, is slower at 128 threads than at 112 on every graph, by 1.31 to 1.53 times, or 2.69 on Road-USA; GBBS is too, by at most 1.12 times. Our methods are slower at 128 threads only on LiveJournal and uk-2002, by up to 1.38 times, and \wfdo by 1.5\% on Road-USA. Table~\ref{tab:phases}, from five more runs of instrumented builds, splits their searches into the reset of the arrays, which every thread waits for (Section~\ref{sec:impl}), and the search proper, the wait-free method, each the mean over the 20 searches of a run. From 112 to 128 threads, the search proper of \wfdo changes by $-16$ to $+5$\%, and that of \wfdomem by $-11$ to $+17$\%, since the others take over the work of a thread that loses its core, while the reset grows from 0.4--1.7~ms to 1.8--3.4~ms, since a thread without a core when a search begins holds up all the others; on LiveJournal, it is a third of a search of \wfdo at 128 threads, and most of why our methods take longer there than at 112. The search thus tolerates delayed workers, while the reset, which lies outside the method, waits for all of them. These runs are separate from those of Table~\ref{tab:best}, and their totals need not match its medians, since the builds differ and the background work of the host varies from run to run.
+
+\begin{table}
+    \caption{A search of our methods in its two phases, on two sockets, in ms per search: the reset, from when the main thread starts to set up the search to when the first thread starts to search, and the search proper, from then to when the first thread returns. Each column is a median of five runs, taken on its own, so the phases need not add up to the total.}
+    \label{tab:phases}
+    \footnotesize
+    \setlength{\tabcolsep}{3.5pt}
+    \begin{tabular}{l r r r r r r r}
+        \toprule
+        & & \multicolumn{3}{c}{\wfdo} & \multicolumn{3}{c}{\wfdomem} \\
+        \cmidrule(lr){3-5} \cmidrule(lr){6-8}
+        Graph & $T$ & Reset & Search & Total & Reset & Search & Total \\
+        \midrule
+        LiveJournal & 112 & 0.4 & 4.0 & 4.4 & 0.4 & 4.3 & 4.7 \\
+        & 128 & 1.9 & 3.6 & 5.6 & 1.8 & 5.1 & 7.1 \\
+        Twitter & 112 & 1.4 & 42.7 & 44.1 & 1.5 & 42.2 & 43.8 \\
+        & 128 & 2.9 & 39.5 & 42.1 & 2.6 & 40.3 & 44.7 \\
+        Road-USA & 112 & 1.1 & 162.7 & 163.8 & 1.3 & 115.9 & 117.2 \\
+        & 128 & 3.0 & 169.1 & 171.9 & 2.3 & 120.7 & 122.8 \\
+        uk-2002 & 112 & 0.7 & 24.9 & 25.6 & 0.7 & 25.0 & 25.7 \\
+        & 128 & 3.1 & 26.2 & 29.3 & 2.9 & 27.9 & 30.8 \\
+        Kronecker & 112 & 1.2 & 13.5 & 14.8 & 1.2 & 13.4 & 14.7 \\
+        & 128 & 2.1 & 11.7 & 14.1 & 3.2 & 12.7 & 16.9 \\
+        Hubs & 112 & 1.6 & 74.2 & 75.8 & 1.7 & 69.3 & 70.9 \\
+        & 128 & 3.4 & 62.5 & 65.9 & 2.7 & 61.8 & 64.8 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The other programs also set up before their first step, allocating and filling distances, allocating a queue and clearing bitmaps, or refilling arrays that they keep. In instrumented builds of the three, in the median of three other runs per graph alongside ours, this setup takes 0.3 to 14.7\% of a search at 112 threads, our reset 0.5 to 7.6\% of ours, and leaving both out changes no comparison between our methods and the other three: the search proper of the fastest of the three takes 1.39 to 1.62 times as long as that of \wfdo on the four graphs of low diameter and 1.25 times on the graph of hubs, against 1.45 to 1.76 times for whole searches on the four, and on Road-USA, that of PASGAL takes 0.95 times as long as that of \wfdo and 1.35 times as long as that of \wfdomem.
+
+\subsection{Work}
+\label{sec:exp-work}
+
+\begin{table}
+    \caption{The work of a search of \wfdo from vertex 0 on two sockets, relative to that of the sequential baseline: the neighbors examined; the vertices read, in bucket positions, including those of the passes that write frontier codes (Section~\ref{sec:impl-codes}), and in bottom-up scans, against the frontier vertices and bottom-up scans of the baseline; and the share of the neighbors examined in top-down levels that are repeated. Medians of three runs of the counting build; in the rows marked $s$, one of the 112 threads stalls for 10~ms at the start of every level, or for 1~ms on Road-USA.}
+    \label{tab:work}
+    \small
+    \begin{tabular}{l r r r r}
+        \toprule
+        Graph & Threads & Neighbors & Vertices & Repeated \\
+        \midrule
+        LiveJournal & 16 & 1.02 & 1.08 & 1.7\% \\
+        & 64 & 1.06 & 1.40 & 8.7\% \\
+        & 112 & 1.11 & 1.60 & 15.1\% \\
+        & 112$s$ & 1.15 & 1.65 & 15.2\% \\
+        Twitter & 16 & 1.00 & 1.01 & 0.7\% \\
+        & 64 & 1.01 & 1.02 & 2.8\% \\
+        & 112 & 1.02 & 1.03 & 4.2\% \\
+        & 112$s$ & 1.03 & 1.04 & 4.1\% \\
+        Road-USA & 16 & 1.02 & 1.04 & 1.6\% \\
+        & 64 & 1.07 & 1.31 & 6.1\% \\
+        & 112 & 1.09 & 1.45 & 8.5\% \\
+        & 112$s$ & 1.10 & 1.41 & 8.8\% \\
+        uk-2002 & 16 & 1.01 & 1.03 & 0.6\% \\
+        & 64 & 1.14 & 1.10 & 3.3\% \\
+        & 112 & 1.24 & 1.27 & 8.9\% \\
+        & 112$s$ & 1.20 & 1.28 & 8.7\% \\
+        Kronecker & 16 & 1.00 & 1.01 & 19.2\% \\
+        & 64 & 1.01 & 1.02 & 45.0\% \\
+        & 112 & 1.02 & 1.03 & 55.4\% \\
+        & 112$s$ & 1.02 & 1.04 & 55.0\% \\
+        Hubs & 16 & 1.12 & 1.07 & 6.2\% \\
+        & 64 & 1.55 & 1.11 & 15.1\% \\
+        & 112 & 2.04 & 1.15 & 20.6\% \\
+        & 112$s$ & 2.02 & 1.16 & 20.6\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+A wait-free method can always fall back on doing all of the work in every thread (Section~\ref{sec:bg-doall}); the question is how much of it threads actually repeat. A counting build of \wfdo counts, per search, the neighbors that threads examine, the bucket positions and vertices that they read, and the neighbors that they repeat, and builds of GAPBS and the sequential baseline count the same, in runs separate from those of Table~\ref{tab:best}. The counting build marks vertices and certifies chunks with the stores of our timed builds, and differs from them only in per-thread counters and timers. Since every vertex of a top-down level is expanded completely at least once, it counts as repeated, after each search, the neighbors that threads examined in top-down levels beyond the degrees of the vertices of those levels. Table~\ref{tab:work} gives the work of \wfdo relative to that of the sequential baseline, which examines 28.0, 706, 57.7, 802, 36.8 and 136 million neighbors per search on the six graphs, in the order of the table; GAPBS examines exactly the neighbors, and reads exactly the vertices, of the baseline, since it makes the same choices of direction and expands every vertex once.
+
+On the five standard graphs, \wfdo examines at most 2.1\% more neighbors than the sequential baseline at 16 threads and at most 23.9\% more at 112, or 25.5\% in the worst of the three runs, against the $T$-fold work of the trivial method, although it reads up to 65\% more vertices. Where threads repeat a large share of the neighbors of top-down levels, those levels are small: on Kronecker, they repeat up to 55\% of them, but the baseline examines only 0.2 million of its 36.8 million neighbors there, and on LiveJournal nearly all of the repeats lie in the two levels right after the source, which hold 94 and 20,685 vertices, few for 112 threads (Section~\ref{sec:pf-work}). Most of the extra work at 112 threads on LiveJournal and uk-2002 lies in bottom-up levels instead: in blocks that a helper scans again, and in an extra bottom-up level, since the frontier size that the planner counts includes copies of vertices (Section~\ref{sec:do-plan}), mostly appended by two threads scanning the same block, so that with many threads the rule stays bottom-up in most searches for a level that the baseline expands top-down, and a bottom-up level reads every vertex. A build that counts each vertex once, with a CAS on the distance of every bottom-up discovery, runs as many bottom-up levels as the baseline on these two graphs, and at 112 threads cuts the extra vertices read from 60 to 30\% on LiveJournal and from 27 to 11\% on uk-2002, and the extra neighbors on uk-2002 from 24 to 14\%, while on LiveJournal they grow by three points; but its CAS costs more than the work it saves: in the median of five builds, it is 7 to 20\% slower than \wfdo on the four graphs of low diameter at 16, 64, 96 and 112 threads, and within 1.1\% on Road-USA and the graph of hubs. On Road-USA, most of the extra work lies in its thousands of top-down levels, each shared by all threads. On the graph of hubs, most of it lies in bottom-up levels, where \wfdo examines 3.8 times as many neighbors as the baseline although only 3.7\% of its scans of blocks are repeats: a block is certified only as a whole, and the blocks likeliest to be scanned again, since they take longest, hold hubs of the layers not yet reached, each of which examines all of its roughly 50,000 to 100,000 neighbors without finding one in the frontier. A thread stalled at every level changes the neighbors examined by at most 4.1\%, since the others take over its share instead of repeating it.
+
+\paragraph{Orders.} Our helpers take the positions of a bucket in affine orders (Section~\ref{sec:impl}), a cheap stand-in for the uniformly random permutations that Theorem~\ref{thm:records} assumes, rather than an approximation of their distribution: at 112 threads, the share of the neighbors of top-down levels that threads examine again is within 1.5 points of what it is with uniform orders in place of all of ours, on every graph.
+
+\subsection{Other Roots}
+\label{sec:exp-roots}
+
+\begin{table*}
+    \caption{Searches from 16 random roots, on two sockets: each program's mean time over the roots, in ms, with its fastest and slowest root in parentheses. Ratios in the text come from the unrounded means.}
+    \label{tab:roots}
+    \small
+    \begin{tabular}{l r r r r r r}
+        \toprule
+        Graph & Threads & \wfdo & \wfdomem & GAPBS & GBBS & PASGAL \\
+        \midrule
+        LiveJournal & 16 & 13.6 (12.2--15.8) & 13.7 (10.9--18.4) & 15.8 (13.1--20.4) & 20.0 (17.4--30.7) & 66.3 (32.5--126.9) \\
+        & 112 & 5.3 (4.4--7.7) & 5.0 (4.3--6.5) & 8.7 (5.1--41.8) & 8.1 (6.7--10.3) & 16.1 (8.8--26.8) \\
+        Twitter & 16 & 182.4 (136.2--350.0) & 181.8 (136.1--347.1) & 223.3 (158.9--408.8) & 226.4 (170.1--437.2) & 493.4 (319.7--787.0) \\
+        & 112 & 41.4 (31.6--80.4) & 41.6 (32.2--79.5) & 113.0 (52.2--335.7) & 79.3 (62.6--131.7) & 97.8 (63.1--159.7) \\
+        Road-USA & 16 & 159.4 (136.6--181.8) & 141.0 (119.7--150.5) & 285.8 (250.7--307.6) & 1296.6 (1062.8--1435.3) & 475.0 (420.8--556.4) \\
+        & 112 & 180.1 (143.0--204.8) & 134.1 (102.6--158.0) & 552.7 (425.1--764.5) & 1648.8 (1323.5--1789.7) & 155.7 (128.0--178.9) \\
+        uk-2002 & 16 & 67.7 (56.5--87.2) & 67.1 (56.4--86.4) & 79.3 (68.4--93.9) & 90.1 (74.3--119.9) & 193.9 (133.2--393.8) \\
+        & 112 & 24.1 (20.5--28.6) & 24.3 (19.7--27.8) & 35.8 (30.8--40.4) & 45.2 (38.4--57.1) & 43.2 (30.9--84.3) \\
+        Kronecker & 16 & 72.4 (60.4--82.3) & 72.7 (63.5--83.6) & 80.4 (73.2--93.2) & 114.9 (93.6--129.1) & 358.4 (162.7--646.7) \\
+        & 112 & 15.8 (13.9--19.6) & 16.2 (13.6--20.7) & 27.8 (22.9--40.2) & 41.1 (34.4--48.9) & 65.9 (29.8--116.7) \\
+        Hubs & 16 & 279.6 (276.0--285.6) & 263.5 (257.3--268.8) & 306.2 (249.9--368.0) & 293.4 (286.4--301.2) & 700.5 (684.2--726.4) \\
+        & 112 & 77.9 (74.4--81.2) & 73.3 (69.1--78.5) & 277.0 (203.3--346.8) & 101.7 (96.1--105.7) & 154.2 (147.5--160.2) \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+The searches above start from vertex 0. To see how much the root matters, we repeat the runs of the six graphs from 16 other roots, at 16 and 112 threads over both sockets. The roots are drawn uniformly at random, with a fixed seed, among the vertices whose search reaches at least half of the graph; on each graph, all of them reach the same vertices as vertex 0, from 50.8\% of Kronecker to all of Twitter, Road-USA and the graph of hubs. Each program is built once, with its code unshifted, and runs 20 searches from each root, with the programs taking turns from root to root; every run gave the distances of a sequential BFS from its root.
+
+Our two methods are faster on average than GAPBS, GBBS and PASGAL in every setting of Table~\ref{tab:roots} but one, Road-USA at 112 threads, where PASGAL is faster than \wfdo but not than \wfdomem, as from vertex 0; elsewhere, the fastest of the three takes 1.05 to 1.79$\times$ as long as \wfdo at 16 threads, and 1.30 to 1.91$\times$ at 112. Vertex 0 is within the range of the other roots for every program, except on uk-2002, where it is slower than every other root for \wfdo at 16 threads, for GAPBS at 112, and for PASGAL at both counts, and on the graph of hubs, where it is the root of the layers and has the deepest search, and GAPBS takes longer from it than from any other root at both counts, and PASGAL less, as does GBBS at 16 threads.
+
+\subsection{The Per-Level Cost of Our Methods}
+\label{sec:exp-deep}
+
+Every thread takes part in every level: it plans the level or adopts its plan, and visits up to $T$ entries of its node, and in \wfdo, one thread also links a node of $T$ entries for the next level. A level therefore costs every thread $O(T)$ steps, however few vertices it holds, and the $D+2$ levels of a search cost it $O(T(D+2))$ steps besides its share of the work (Theorem~\ref{thm:work-td}). On graphs of low diameter, this cost is small next to the work of their few levels; on a path, it is nearly all that a search does. This is where our methods are weakest.
+
+\begin{table}
+    \caption{The time of a level on a path of 10,000 vertices, whose search has 10,000 levels of one vertex each: the time per search divided by 10,000, in $\mu$s, in the median of five builds of each program. The sequential baseline takes 0.04~$\mu$s per level.}
+    \label{tab:chain}
+    \small
+    \begin{tabular}{r r r r r r}
+        \toprule
+        Threads & \wfdo & \wfdomem & GAPBS & GBBS & PASGAL \\
+        \midrule
+        1 & 0.07 & 0.04 & 0.26 & 0.50 & 0.04 \\
+        2 & 1.64 & 1.33 & 1.92 & 0.51 & 0.05 \\
+        16 & 3.10 & 2.32 & 5.15 & 0.51 & 0.04 \\
+        64 & 5.01 & 3.42 & 13.71 & 0.52 & 0.05 \\
+        112 & 12.35 & 5.69 & 24.60 & 0.51 & 0.05 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Table~\ref{tab:chain} gives the cost of a level on a path of 10,000 vertices. With two threads, on different sockets, a level of \wfdo takes 1.64~$\mu$s, against 0.07~$\mu$s with one, since every level moves the cache lines of its node, its plan and its one bucket between the sockets, and every further thread adds an entry that every thread visits; \wfdomem, which reuses its two nodes, grows more slowly. GAPBS grows faster still, since every one of its steps ends at a barrier of all of its threads. GBBS stays flat, since it runs a frontier of one vertex as a single block on the calling thread, and PASGAL is nearly as fast as the sequential baseline, since a task follows the vertices it discovers through a local queue of up to 128 entries, setting distances with an atomic minimum that a later, shorter path could still lower, so that one round covers up to 128 levels~\cite{pasgal, vgc_hashbag}. The road network, with 6,262 levels of about 3,800 vertices, lies in between, and our methods are at their fastest there at 48 threads (Section~\ref{sec:exp-speed}).
+
+On the road network, \wfdomem, whose best time is 17\% below that of \wfdo, does the same work with less new memory: \wfdo puts every level in a new node with new buckets, 42 to 51~KB per level on this graph (Section~\ref{sec:exp-memory}), so its appends write lines that the cores do not hold, while the two nodes of \wfdomem keep their buckets in the caches. Hardware counters are consistent with this, although they cover each search until every call has returned, and so include calls that return after the first and the spinning of threads that have returned: over two runs, \wfdo takes 10 to 34\% more cycles than \wfdomem at 1, 16, 40 and 112 threads, for 4 to 5\% more instructions, and its requests miss the last-level cache 18 to 30\% more often, while its stores miss the private caches far more often only at one thread.
+
+These costs follow from our design, not from wait-freedom itself. Every thread goes through every level and visits all $T$ entries of its node, so that it could finish the search alone, although a wait-free thread may skip a level that it finds certified complete, as our late threads do (Sections~\ref{sec:do-plan} and~\ref{sec:mem-reuse}); and our methods never change a published distance to a different value, which rules out the corrections that let PASGAL run ahead of the levels. On graphs whose levels hold few vertices, blocking implementations that leave a small level to one thread, or run past it, are faster than ours.
+
+\subsection{A Graph of Hubs}
+\label{sec:exp-hubs}
+
+Proposition~\ref{prop:granularity} says that a vertex that is certified only as a whole can cost $T$ times its degree. The graph of hubs (Section~\ref{sec:exp-setup}), every other frontier of which consists of 8 such vertices, shows what certifying chunks instead buys. With whole lists, threads repeat 94\% of the neighbors that they examine in top-down levels at 112 threads, so that they examine 17 times as many as the sequential baseline does there, and a search takes 1.4 times as long as with chunks at 16 threads and 3.4 times as long at 112, in three runs of one build of each. With chunks, they repeat 21\%, and our two methods keep improving through 128 threads (Figure~\ref{fig:scaling} and Appendix~\ref{sec:app-times}), to 19.5 and 20.6 times faster than the sequential baseline at 112, while GAPBS, which expands every vertex of a top-down level in a single thread, so that at most 8 of its threads work in a top-down level of hubs, improves little past 16 threads.
+
+\subsection{Memory}
+\label{sec:exp-memory}
+
+\begin{table}
+    \caption{The memory of \wfdo and \wfdomem, from vertex 0 on two sockets, in MB of $10^6$ bytes: the most that a search takes from the arenas, and how much the resident size of the process grows over 20 searches. The graphs themselves take 0.59, 12.08, 0.42, 2.53, 4.46 and 0.60~GB of $10^9$ bytes, and with the per-vertex arrays and the rest of the process, the resident size before the searches is 0.70, 12.72, 0.76, 2.84, 4.95 and 0.96~GB. Ratios in the text come from the unrounded values.}
+    \label{tab:memory}
+    \small
+    \begin{tabular}{l r r r r r}
+        \toprule
+        & & \multicolumn{2}{c}{\wfdo} & \multicolumn{2}{c}{\wfdomem} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6}
+        Graph & Threads & Search & Resident & Search & Resident \\
+        \midrule
+        LiveJournal & 1 & 39.8 & 24.0 & 38.1 & 24.3 \\
+        & 16 & 40.0 & 41.2 & 38.1 & 47.3 \\
+        & 112 & 53.9 & 62.2 & 43.9 & 59.3 \\
+        Twitter & 1 & 306.5 & 167.0 & 299.3 & 164.9 \\
+        & 16 & 306.2 & 356.5 & 299.2 & 231.3 \\
+        & 112 & 323.6 & 362.8 & 301.0 & 377.0 \\
+        Road-USA & 1 & 265.0 & 256.3 & 1.9 & 0.1 \\
+        & 16 & 277.6 & 287.5 & 1.9 & 2.2 \\
+        & 112 & 317.1 & 466.8 & 2.2 & 18.7 \\
+        uk-2002 & 1 & 250.0 & 76.3 & 172.6 & 50.1 \\
+        & 16 & 248.8 & 325.4 & 172.2 & 184.6 \\
+        & 112 & 250.2 & 377.6 & 171.2 & 97.0 \\
+        Kronecker & 1 & 300.3 & 72.8 & 270.4 & 70.0 \\
+        & 16 & 300.3 & 132.7 & 270.3 & 169.2 \\
+        & 112 & 301.3 & 307.0 & 269.8 & 93.1 \\
+        Hubs & 1 & 286.1 & 286.1 & 12.4 & 7.0 \\
+        & 16 & 298.6 & 321.5 & 12.5 & 11.0 \\
+        & 112 & 317.6 & 479.7 & 19.5 & 36.8 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Table~\ref{tab:memory} gives the memory of our two methods at 1, 16 and 112 threads. We count the bytes that the arenas of both kinds hand out in a search, which hold all that a search of \wfdo allocates, its nodes and its bucket arrays, and the bucket arrays and level records of \wfdomem, whose two nodes take under 0.1~MB more; nothing is freed during a search, so a search holds the most at its end. We also measure how much the resident size of the process, file-backed and shared pages included, grows over the 20 searches of a thread count, from its size once the graph and the per-vertex arrays are loaded, which is the same for both methods. An arena's pages become resident when first written, unless the process already held them, and the arenas keep their chunks from one search to the next, so this growth can be smaller or larger than what one search takes.
+
+The two methods differ the most on graphs with many small levels. On the road network, a search of \wfdo takes 265 to 317~MB, 63 to 75\% of what the graph takes, and one of \wfdomem 1.9 to 2.2~MB, 142 to 149 times less, since each of its buckets holds one level at a time, a few thousand vertices there; most of it is the record of each of its 6,263 levels (Section~\ref{sec:mem-memory}). The graph of hubs, with 128 levels, is similar, with 16 to 24 times less. On LiveJournal, Twitter and Kronecker, whose largest levels hold a large share of their vertices, the two take about the same, as Section~\ref{sec:mem-memory} expects, and uk-2002, with 29 levels, lies in between. The resident size can grow by more than a search takes, by about 1.5 times as much for \wfdo at 112 threads on the road network, uk-2002 and the graph of hubs.
+
+\subsection{Stalled Threads}
+\label{sec:exp-stalls}
+
+A program that waits for all of its threads at the end of every level or round is held up by each delayed thread, while in our methods the others take over the work of a delayed thread and go on. To measure the difference, with 112 workers over both sockets, which leaves 16 cores for the host and for the thread that sends signals, we stall on purpose: one worker at the start of every level or round; every worker at random points, varying the length of a stall and the share of time stalled; and our workers where a stall leaves the most work to the others. The text gives numbers for Twitter, the largest graph, and Road-USA, each of whose 6,262 levels ends in a synchronization in GAPBS and GBBS, while a round of PASGAL can span many (Section~\ref{sec:exp-deep}), and summarizes the other four; on Road-USA, the stalls last at most 1~ms, since with stalls of 1~ms at every level a search of GAPBS already takes 6.4~s. The programs are built with the code that stalls them, unshifted, and each setting runs five times, a run being 20 searches, with the programs taking turns; each point is the median of the five runs, and every run gave correct distances. The experiments run apart from each other and from those of Section~\ref{sec:exp-speed}, so the times without stalls differ between them: on Twitter, GAPBS takes 58.9~ms without stalls in the first experiment, 58.1~ms in the second, and 55.7~ms in the benchmark.
+
+\input{sections/data-stalls.tex}
+
+\pgfplotsset{
+    stalls/.style={
+        tick label style={font=\scriptsize}, label style={font=\scriptsize}, title style={font=\scriptsize},
+        grid=major, grid style={gray!25},
+        every axis plot/.append style={line width=0.6pt, mark size=1.3pt},
+    },
+    stallgrid/.style={
+        scale only axis, width=4.5cm, height=3.0cm, xmode=log, ymode=log,
+        log ticks with fixed point, /pgf/number format/1000 sep={},
+        ytick={1,2,5,10,20,50,100,200,500,1000,2000,5000,10000},
+        ylabel={Time per search (ms)},
+        tick label style={font=\footnotesize}, label style={font=\footnotesize},
+        title style={font=\small, yshift=-0.6ex},
+        grid=major, grid style={gray!25},
+        every axis plot/.append style={line width=0.7pt, mark size=1.4pt},
+    },
+    stallgridlegend/.style={legend to name=#1, legend columns=5, legend style={font=\small, draw=none, /tikz/every even column/.append style={column sep=0.8em}}},
+}
+
+% a log axis has no 0, so the runs without stalls, the rows of table #1 whose column #2 is 0, are drawn at #3
+\newcommand{\stallplots}[3]{%
+    \addplot[wfdo] table[x expr={\thisrow{#2} == 0 ? #3 : \thisrow{#2}}, y=wd] {#1};
+    \addplot[wfdomem] table[x expr={\thisrow{#2} == 0 ? #3 : \thisrow{#2}}, y=mem] {#1};
+    \addplot[gapbs] table[x expr={\thisrow{#2} == 0 ? #3 : \thisrow{#2}}, y=gapbs] {#1};
+    \addplot[gbbs] table[x expr={\thisrow{#2} == 0 ? #3 : \thisrow{#2}}, y=gbbs] {#1};
+    \addplot[pasgal] table[x expr={\thisrow{#2} == 0 ? #3 : \thisrow{#2}}, y=pasgal] {#1};
+}
+
+\begin{figure*}
+    \centering
+    \begin{tikzpicture}
+    \begin{groupplot}[
+        group style={group size=3 by 2, horizontal sep=1.3cm, vertical sep=1.4cm, xlabels at=edge bottom, ylabels at=edge left},
+        stallgrid, xlabel={Stall per level or round ($\mu$s)},
+        xtick={3,10,100,1000,10000}, xticklabels={0,10,100,1000,10000},
+    ]
+    \nextgroupplot[title={LiveJournal}, stallgridlegend=lengthlegend]
+    \stallplots{\dataStallLengthLiveJournal}{us}{3}
+    \legend{\wfdo, \wfdomem, GAPBS, GBBS, PASGAL}
+    \nextgroupplot[title={Twitter}]
+    \stallplots{\dataStallLengthTwitter}{us}{3}
+    \nextgroupplot[title={Road-USA}]
+    \stallplots{\dataStallLengthRoad}{us}{3}
+    \nextgroupplot[title={uk-2002}]
+    \stallplots{\dataStallLengthUk}{us}{3}
+    \nextgroupplot[title={Kronecker}]
+    \stallplots{\dataStallLengthKron}{us}{3}
+    \nextgroupplot[title={Hubs}]
+    \stallplots{\dataStallLengthHubs}{us}{3}
+    \end{groupplot}
+    \end{tikzpicture}
+    \vspace{0.5ex}
+    \pgfplotslegendfromname{lengthlegend}
+    \caption{Median time per search with 112 threads on two sockets, against how long one of the threads stalls at the start of every level or round, on the five standard graphs and on the graph of hubs; on Road-USA, the stalls last at most 1~ms. Both axes are logarithmic, apart from the points at 0, which are the runs without stalls. Appendix~\ref{sec:app-stalls} lists the times.}
+    \Description{Six plots, in two rows of three, one per graph, of search time against the length of the stall of one thread: our two methods stay flat on every graph, while GAPBS, PASGAL and, on every graph but Road-USA, GBBS grow with the stall.}
+    \label{fig:stall-length}
+\end{figure*}
+
+\paragraph{One thread per level.} In the first experiment, one worker busy-waits for a set time when it starts its work in a level or round, so that it holds that work while it waits, as a thread preempted in the middle of its share would: our methods stall at the start of every level (\wfdomem only if it is not over), GAPBS at the start of every top-down and bottom-up step, and GBBS and PASGAL at the first vertex or block of edges that a worker takes in a round. The stalled worker is the last of the 112, so that the threads that run the sequential parts of GAPBS, GBBS and PASGAL never stall. Figure~\ref{fig:stall-length} varies the stall from 10~$\mu$s to 10~ms, and to 1~ms on Road-USA. Our methods stay flat on every graph. GAPBS grows by about one stall per level, since every one of its steps waits for the stalled thread: on Twitter, to 4.0 times its time without stalls at 10~ms, and on Road-USA to 6.4~s with stalls of 1~ms, about 0.94~ms more for each of the 6,262 levels. GBBS and PASGAL grow less on these two graphs, since a stalled worker delays a round only when it holds part of it: on Twitter, they take 1.22 and 1.26 times as long at 10~ms as without stalls, and on Road-USA, PASGAL takes 2.7 times as long at 1~ms, while GBBS, whose rounds on this graph seldom give the stalled worker any work, changes by at most 8\%.
+
+\paragraph{The variation of runs.} The runs of a setting vary by more than short stalls cost: on Twitter, the five runs of \wfdo without stalls take 44.0 to 48.7~ms per search. For Twitter, we therefore also give the mean of the five runs, each the mean of its 20 searches, with its 95\% interval by Student's $t$, and the difference between the runs with and without stalls, with its 95\% interval by Welch's method. With one thread stalled for 10~ms at every level, \wfdo takes 47.9~ms (46.3--49.4), 5.2\% longer than without stalls, and the interval of the difference, $-0.1$ to 10.5\%, just includes zero; for \wfdomem, it is $-0.2$ to 17.3\%. The interval includes zero for both of our methods at every length, and excludes it for each of the other programs at the longer stalls; but it also excludes zero where PASGAL takes 3 to 4\% less time with short stalls than without, which no stall explains: the runs of different settings also differ by more than those of one setting.
+
+\paragraph{The other graphs.} With stalls of 10~ms on LiveJournal, uk-2002, Kronecker and the graph of hubs, our methods take at most 7\% longer than without stalls, while GAPBS, GBBS and PASGAL take up to 19.5, 14.6 and 7.8 times as long, GAPBS and PASGAL the most on LiveJournal and GBBS on the graph of hubs. GAPBS grows by a smaller factor on Twitter than on LiveJournal because its levels are longer, not because it waits less: it waits about once per level on both, its searches growing by 123~ms over the 12 levels of LiveJournal and by 179~ms over the 17 of Twitter, but its searches take 0.55~ms per level on LiveJournal and 3.5~ms on Twitter. On the graph of hubs, GBBS also waits about once per level, since its rounds there spread over all of its workers: its searches grow by 1.25~s over the 128 levels.
+
+The stalled threads themselves return late. With stalls of 10~ms on Twitter, the stalled thread of \wfdo returns 182.5~ms after the search starts, and that of \wfdomem after 68.6~ms, since the build of \wfdo stalls it again at every level it walks through, even one that is over, while the build of \wfdomem skips the stall in the levels that are over (Section~\ref{sec:mem-reuse}); on Road-USA, with stalls of 1~ms, they return after 6.27~s and 124.1~ms. Neither delays the result, which is final once the first call returns, but until it returns, a stalled thread is not free for other work, and the state of its search cannot be reused (Section~\ref{sec:bg-method}).
+
+\begin{figure*}
+    \centering
+    \begin{tikzpicture}
+    \begin{groupplot}[
+        group style={group size=3 by 2, horizontal sep=1.3cm, vertical sep=1.4cm, xlabels at=edge bottom, ylabels at=edge left},
+        stallgrid, xlabel={Length of a stall ($\mu$s)},
+        xtick={3,10,100,1000,10000}, xticklabels={0,10,100,1000,10000},
+    ]
+    \nextgroupplot[title={LiveJournal}, stallgridlegend=randomlegend]
+    \stallplots{\dataNoiseLengthLiveJournal}{us}{3}
+    \legend{\wfdo, \wfdomem, GAPBS, GBBS, PASGAL}
+    \nextgroupplot[title={Twitter}]
+    \stallplots{\dataNoiseLengthTwitter}{us}{3}
+    \nextgroupplot[title={Road-USA}]
+    \stallplots{\dataNoiseLengthRoad}{us}{3}
+    \nextgroupplot[title={uk-2002}]
+    \stallplots{\dataNoiseLengthUk}{us}{3}
+    \nextgroupplot[title={Kronecker}]
+    \stallplots{\dataNoiseLengthKron}{us}{3}
+    \nextgroupplot[title={Hubs}]
+    \stallplots{\dataNoiseLengthHubs}{us}{3}
+    \end{groupplot}
+    \end{tikzpicture}
+    \vspace{0.5ex}
+    \pgfplotslegendfromname{randomlegend}
+    \caption{Median time per search with 112 threads on two sockets, with every thread stalled at random points for 2\% of its time, against the length of a stall, on the five standard graphs and on the graph of hubs; on Road-USA, the stalls last at most 1~ms. Both axes are logarithmic, apart from the points at 0, which are the runs without stalls. Appendix~\ref{sec:app-stalls} lists the times.}
+    \Description{Six plots, in two rows of three, one per graph, of search time against the length of random stalls that take 2 percent of every thread's time: GAPBS and PASGAL grow with the length on every graph, and GBBS on every graph but Road-USA, while one of our two methods is the fastest at every point.}
+    \label{fig:stall-random}
+\end{figure*}
+
+\begin{figure*}
+    \centering
+    \begin{tikzpicture}
+    \begin{groupplot}[
+        group style={group size=3 by 2, horizontal sep=1.3cm, vertical sep=1.4cm, xlabels at=edge bottom, ylabels at=edge left},
+        stallgrid, xlabel={Share of time stalled (\%)},
+        xtick={0.2,0.5,1,2,5,10,20,50}, xticklabels={0,0.5,1,2,5,10,20,50},
+    ]
+    \nextgroupplot[title={LiveJournal}, stallgridlegend=sharelegend]
+    \stallplots{\dataNoiseShareLiveJournal}{share}{0.2}
+    \legend{\wfdo, \wfdomem, GAPBS, GBBS, PASGAL}
+    \nextgroupplot[title={Twitter}]
+    \stallplots{\dataNoiseShareTwitter}{share}{0.2}
+    \nextgroupplot[title={Road-USA}]
+    \stallplots{\dataNoiseShareRoad}{share}{0.2}
+    \nextgroupplot[title={uk-2002}]
+    \stallplots{\dataNoiseShareUk}{share}{0.2}
+    \nextgroupplot[title={Kronecker}]
+    \stallplots{\dataNoiseShareKron}{share}{0.2}
+    \nextgroupplot[title={Hubs}]
+    \stallplots{\dataNoiseShareHubs}{share}{0.2}
+    \end{groupplot}
+    \end{tikzpicture}
+    \vspace{0.5ex}
+    \pgfplotslegendfromname{sharelegend}
+    \caption{Median time per search with 112 threads on two sockets, with every thread stalled at random points in stalls of 1~ms, against the share of its time stalled, on the five standard graphs and on the graph of hubs; on Road-USA, up to 5\%. Both axes are logarithmic, apart from the points at 0, which are the runs without stalls. Appendix~\ref{sec:app-stalls} lists the times.}
+    \Description{Six plots, in two rows of three, one per graph, of search time against the share of every thread's time stalled, in stalls of 1 millisecond: the other programs grow with the share faster than our two methods on every graph, and one of our two methods is the fastest at every point.}
+    \label{fig:stall-share}
+\end{figure*}
+
+\begin{table}
+    \caption{Median time per search of our methods with 112 threads on two sockets, in ms, with threads stalled right after a winning CAS or halfway through a chunk of a hub, as often as stalls at random points for 2\% of the time would be, except in hubs on Twitter at 10 and 100~$\mu$s, where every point stalls, which is less often. Road-USA has no vertex of 1,024 or more neighbors, and its stalls last at most 1~ms. The stalls of 0~$\mu$s cost what the points themselves cost.}
+    \label{tab:stall-points}
+    \footnotesize
+    \setlength{\tabcolsep}{2.5pt}
+    \begin{tabular}{l r r r r r r}
+        \toprule
+        & \multicolumn{4}{c}{Twitter} & \multicolumn{2}{c}{Road-USA} \\
+        \cmidrule(lr){2-5} \cmidrule(lr){6-7}
+        & \multicolumn{2}{c}{After a CAS} & \multicolumn{2}{c}{In a hub} & \multicolumn{2}{c}{After a CAS} \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+        Stall & \wfdo & \wfdomem & \wfdo & \wfdomem & \wfdo & \wfdomem \\
+        \midrule
+        0 & 43.9 & 44.1 & 43.9 & 44.2 & 166.4 & 119.2 \\
+        10~$\mu$s & 44.8 & 44.6 & 44.1 & 44.0 & 171.8 & 121.8 \\
+        100~$\mu$s & 44.8 & 44.5 & 44.6 & 44.3 & 165.8 & 117.6 \\
+        1~ms & 44.4 & 44.6 & 44.3 & 44.1 & 165.5 & 117.5 \\
+        10~ms & 45.0 & 45.2 & 45.3 & 44.9 & -- & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Random stalls.} Delays in a real system fall wherever the threads happen to be. In the second experiment, every worker, independently of the others, alternates between running and stalling: it runs for a random time, is then stopped by a signal wherever it is, and busy-waits in the signal handler for a set time $d$ before it runs on. To stall it for a share $s$ of its time, we draw its running times from an exponential distribution of mean $d(1-s)/s$: with stalls of 1~ms for 2\% of the time, a worker runs for 49~ms on average between stalls. The share is that of a worker's whole run: the signals also arrive while it resets its arrays and while it waits between searches, and a signal that arrives while an earlier one is still pending merges with it, so the share of a search that a worker spends stalled can differ. Busy-waiting in a handler models a worker delayed while it holds work; it does not reproduce every effect of preemption or of page faults, such as the loss of cached data. Figure~\ref{fig:stall-random} keeps the share at 2\% and varies the length of a stall from 10~$\mu$s to 10~ms, so that the workers lose the same time in many short stalls or in a few long ones, and Figure~\ref{fig:stall-share} keeps the stalls at 1~ms and varies the share from 0.5 to 50\%; on Road-USA, the stalls last at most 1~ms and take at most 5\% of the time. On Twitter, with stalls of 10~ms for 2\% of the time, \wfdo takes 1.16 times as long as without stalls, and GAPBS, GBBS and PASGAL 2.85, 1.56 and 1.38 times as long. As the share grows, the time of \wfdo grows slowly, to 1.67 times its time without stalls with half of every worker's time stalled, since the workers that run take over the work of those that are stalled, while GAPBS, GBBS and PASGAL then take 2.28, 3.00 and 2.34 times as long. On Road-USA, our methods take within 4\% of their times without stalls at every point, while GAPBS takes 3.3~s with stalls of 1~ms for 2\% of the time and 7.8~s with 5\%, PASGAL 2.0 and 3.1 times as long as without stalls, and GBBS within 12\%; on the other four graphs, with half of every worker's time stalled in stalls of 1~ms, \wfdo takes 1.45 to 1.77 times as long as without stalls, and the other programs 2.7 to 23.2 times, the most for GBBS on the graph of hubs. What random stalls of 10~ms add to the time of \wfdo falls mostly in the reset before a search, which waits for every thread, rather than in the search proper: in three further runs on Twitter, the reset took 7.5~ms per search in the median, against 1.5~ms without stalls, while the search proper took 43.8~ms, against 42.4~ms.
+
+\paragraph{Where a stall falls.} The third experiment stalls our workers where a stall leaves the most to the others, at points of two kinds: right after the winning CAS of a discovery, and in the middle of the expansion of a \emph{hub}, a vertex with at least 1,024 neighbors, halfway through one of its chunks, which a helper scans again in full. A worker stalls at each point of the kind with the probability that gives a search as many stalls as a share of 2\% does at random points, so that the stalls differ only in where they fall, except where a graph has too few points for that, as in hubs on Twitter at 10 and 100~$\mu$s and on Kronecker at 10~$\mu$s, where every point stalls. On Twitter and Road-USA, our methods take within 4\% of their times with stalls of 0~$\mu$s at every point and length (Table~\ref{tab:stall-points}), and on the other four graphs, with stalls of 10~ms, within 4\% as well, or 12\% on LiveJournal, whose searches take about 5~ms.
+
+\subsection{Accounting for the Performance Gap}
+\label{sec:exp-speedup}
+
+GAPBS and \wfdo both run direction-optimizing BFS with the same rule for switching directions, but they need not choose the same direction for every level, since the frontier sizes that \wfdo counts include copies of vertices (Section~\ref{sec:exp-work}). We split the time of each to describe where the gap between them appears; the split does not measure what helping alone causes. For every parallel loop of GAPBS, we time how long each thread takes to start it, to do its share, and then to wait at the barrier that ends it, and we time its work outside the traversal: allocating and filling its distances, clearing its bitmaps, converting between its queue and its bitmap, and fixing its distances at the end. The three times of a loop add up to its wall time for each thread, and so do their means over the threads, which we sum over the steps of a search and average over its searches, so that each is a share of the wall time of a search. For \wfdo, we time the reset and the search proper of each search, the latter to the first return, as in Table~\ref{tab:phases}, and in every level each thread's time to plan it, to write frontier codes, on its own share and helping others, with means over the threads in the same way. Both run in three rounds on the six graphs at 16, 64 and 112 threads, next to their builds without timers, and we use the round of each whose time is the median. These runs are separate from those of Table~\ref{tab:best}: in the mean of the three rounds, the builds without timers took from 15\% less to 8\% more time than in the benchmark, and the timed builds within 3\% of the time of the builds without timers.
+
+Table~\ref{tab:speedup} splits the gap, the time of a search of GAPBS less that of \wfdo to its first return, in two. Let $W_G$ be the time that the threads of GAPBS spend starting traversal steps and waiting at their ends, $C_G$ the time that they spend working in those steps, and $B_G$ the rest of its time, its setup and bookkeeping, with the starts and waits of their loops; let $C_F$ be the search proper of \wfdo less an average thread's time writing frontier codes, and $B_F$ the rest of its time, its reset and frontier codes. Then the gap is
+\[
+(W_G + C_G + B_G) - (C_F + B_F) = (W_G + C_G - C_F) + (B_G - B_F).
+\]
+The first term, which we call the \emph{traversal} term, is the waiting of GAPBS less how much longer the levels of \wfdo, without frontier codes, take than the threads of GAPBS spend working, a residual rather than a time that we measure directly; the second is bookkeeping. Helping is what lets \wfdo do without that waiting, but it is not free: helpers repeat work (Section~\ref{sec:exp-work}), and the levels of \wfdo have bookkeeping of their own. The split accounts for the gap, rather than removing one cause at a time: the differences between the two programs in their choices of direction, in how they represent frontiers, allocate memory and schedule threads, and in the chunks of \wfdo, all fall into its terms.
+
+\begin{table}
+    \caption{The gap between GAPBS and \wfdo on two sockets, in ms per search: the time of each; the waiting $W_G$, the time that the threads of GAPBS spend starting the steps of its traversal and waiting at their ends; and the gap split into the traversal term, the waiting less how much longer the levels of \wfdo take than the threads of GAPBS spend working, and bookkeeping, the setup and bookkeeping of GAPBS beyond the reset and frontier codes of \wfdo, with their shares of the gap. From builds with timers, in the median round of three.}
+    \label{tab:speedup}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{l r r r r r r}
+        \toprule
+        Graph & $T$ & GAPBS & \wfdo & Waiting & Traversal & Bookkeeping \\
+        \midrule
+        LiveJournal & 16 & 15.1 & 11.6 & 1.6 & 0.9 (26\%) & 2.6 (74\%) \\
+         & 64 & 5.9 & 4.6 & 1.0 & 0.1 (11\%) & 1.1 (89\%) \\
+         & 112 & 5.2 & 4.1 & 1.1 & 0.1 (9\%) & 1.0 (91\%) \\
+        Twitter & 16 & 187.7 & 181.8 & 0.7 & $-$3.9 ($-$67\%) & 9.7 (167\%) \\
+         & 64 & 72.5 & 57.4 & 0.8 & 7.6 (51\%) & 7.4 (49\%) \\
+         & 112 & 58.9 & 42.3 & 1.1 & 9.1 (55\%) & 7.5 (45\%) \\
+        Road-USA & 16 & 259.3 & 138.8 & 76.0 & 111.8 (93\%) & 8.8 (7\%) \\
+         & 64 & 333.5 & 111.6 & 134.7 & 211.2 (95\%) & 10.7 (5\%) \\
+         & 112 & 514.8 & 150.5 & 203.6 & 336.3 (92\%) & 28.1 (8\%) \\
+        uk-2002 & 16 & 86.1 & 73.7 & 4.2 & 7.1 (57\%) & 5.3 (43\%) \\
+         & 64 & 40.9 & 27.1 & 5.1 & 9.0 (65\%) & 4.8 (35\%) \\
+         & 112 & 38.5 & 24.5 & 6.3 & 8.7 (62\%) & 5.3 (38\%) \\
+        Kronecker & 16 & 73.0 & 64.8 & 1.5 & 2.2 (27\%) & 6.0 (73\%) \\
+         & 64 & 29.0 & 19.5 & 2.1 & 4.5 (47\%) & 5.0 (53\%) \\
+         & 112 & 24.9 & 14.0 & 2.2 & 5.4 (49\%) & 5.5 (51\%) \\
+        Hubs & 16 & 330.7 & 275.8 & 139.8 & 50.4 (92\%) & 4.6 (8\%) \\
+         & 64 & 300.3 & 82.2 & 228.7 & 212.8 (98\%) & 5.4 (2\%) \\
+         & 112 & 294.8 & 68.1 & 242.0 & 221.7 (98\%) & 5.0 (2\%) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}
+    \caption{The work that helpers do in \wfdo on LiveJournal on two sockets with 112 threads, one of which stalls at the start of every level, in percent: their share of the vertices expanded and of the neighbors examined in top-down levels, of the blocks scanned in bottom-up levels, and of the blocks of the stalled thread; and the share of the neighbors examined, and of the scans of blocks, that repeat work that another thread also finished.}
+    \label{tab:helping}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{r r r r r r r}
+        \toprule
+        & \multicolumn{4}{c}{Done by helpers} & \multicolumn{2}{c}{Repeated} \\
+        \cmidrule(lr){2-5} \cmidrule(lr){6-7}
+        Stall & Vertices & Neighbors & Blocks & Stalled & Neighbors & Blocks \\
+        \midrule
+        0 & 52.0 & 62.1 & 25.8 & 24.0 & 15.2 & 11.2 \\
+        100~$\mu$s & 54.3 & 61.5 & 26.0 & 56.8 & 15.2 & 11.3 \\
+        500~$\mu$s & 51.0 & 60.9 & 27.6 & 95.3 & 15.0 & 12.2 \\
+        1~ms & 51.1 & 60.5 & 30.0 & 99.6 & 15.0 & 12.8 \\
+        2~ms & 52.8 & 61.6 & 29.1 & 100.0 & 15.1 & 12.8 \\
+        10~ms & 54.2 & 61.4 & 28.5 & 100.0 & 14.9 & 12.6 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table*}
+    \caption{Ways to run a parallel BFS, and what they give: whether a search is wait-free, the work of a top-down level $d$, in terms of its vertices $L_d$, their neighbors $\mathrm{vol}(L_d)$ and the positions $Q_d \leq T|L_d|$ of its buckets, or of the graph, and the work that threads repeat. The bound for \wfdo holds for every schedule. If helpers take positions in independent uniformly random orders, and marks are sequentially consistent or fenced, then with high probability they also expand vertices at only $O((Q_d + T^2)\log n)$ positions (Theorem~\ref{thm:records}); our implementation's affine orders and unfenced marks do not meet these assumptions.}
+    \label{tab:related}
+    \small
+    \begin{tabular}{l c l l}
+        \toprule
+        Approach & Wait-free & Work of a level & Repeated work \\
+        \midrule
+        Trivial (Section~\ref{sec:bg-doall}) & yes & $T(|L_d| + \mathrm{vol}(L_d))$ & all of it, $T-1$ times \\
+        All-vertex CWA per level~\cite{martel_apram, martel_cwa} & yes & at least $n$ & within the CWA's bound \\
+        Work stealing~\cite{blumofe_workstealing, gbbs, pasgal} & no & $O(|L_d| + \mathrm{vol}(L_d))$ & no task runs twice; PASGAL revisits vertices \\
+        Idempotent stealing~\cite{michael_iws} & no & $O(|L_d| + \mathrm{vol}(L_d))$ & stolen tasks, at times \\
+        Asynchronous BFS~\cite{pearce_async} & no & $O(|L_d| + \mathrm{vol}(L_d))$ & vertices revisited \\
+        \wfdo (this paper) & yes & $O(T(Q_d + \mathrm{vol}(L_d)) + T^2)$ & measured: 0.3--24\% more neighbors on the \\
+        & & & standard graphs, up to 104\% on hubs (Table~\ref{tab:work}) \\
+        \bottomrule
+    \end{tabular}
+\end{table*}
+
+\paragraph{Uneven work and many steps.} Where the work of many steps is uneven, or a search has thousands of steps, nearly all of the gap is in the traversal term at every count. On the graph of hubs, GAPBS expands each vertex of a top-down step in a single thread, so a step of 8 hubs keeps at most 8 threads busy while the others wait; on Road-USA, the 6,259 top-down steps of GAPBS, of its 6,262 in all, give each thread a few dozen to a few hundred vertices on average, so that its threads spend 44 to 72\% as long starting and ending steps as working in them, and its bookkeeping there includes the cost of the timers between steps. On uk-2002, the traversal term is more than half of the gap at every count, and at 16 and 64 threads, 35 to 50\% of the waiting of GAPBS lies in one top-down step, the last before its first bottom-up one, in which one thread works for 2.0 to 2.6~ms while the mean is 0.2 to 0.5~ms, most likely on a vertex of high degree that the static schedule of GAPBS leaves to one thread.
+
+\paragraph{Few levels.} On the other graphs, whose levels are few, the gap is mostly bookkeeping on LiveJournal at every count and on Kronecker at 16 threads, and about half bookkeeping elsewhere, except on Twitter at 16 threads: there the threads of GAPBS wait only 0.7~ms per search in traversal steps, less than the levels of \wfdo take beyond the time that the threads of GAPBS spend working, so that the traversal term is negative and bookkeeping accounts for more than the whole gap. GAPBS clears its bitmaps serially, two before the first step and one before every bottom-up step; lighter bookkeeping, unlike the absence of waiting, is something that a blocking implementation could also have.
+
+\paragraph{How helping spreads the work.} Table~\ref{tab:helping}, from a build of \wfdo that counts the work that each thread does for its own share and for those of others, shows what helpers do on LiveJournal at 112 threads. Without stalls, they expand half of the vertices of top-down levels and examine 62\% of their neighbors, about 1.5 times as many per vertex as owners, since helping happens where a bucket takes long, and they scan 26\% of the blocks of bottom-up levels; 15\% of the neighbors examined in top-down levels, and 11\% of the scans of blocks, repeat work that another thread also finished. When one thread stalls at the start of every level, the others take over its share, scanning more than half of its blocks with stalls of 100~$\mu$s and nearly all of them from 1~ms on, and from 500~$\mu$s on, the stalled thread has nothing to expand in top-down levels, since it reaches every level late and the others discover every vertex; the repeated work grows little with the stall.

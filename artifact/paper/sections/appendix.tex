@@ -1,0 +1,238 @@
+\appendix
+
+\section{Drawing Affine Orders}
+\label{sec:app-affine}
+
+An affine order of $k \geq 2$ items (Section~\ref{sec:impl}) needs a stride $b$ coprime to $k$. Our implementation obtains a candidate stride in $1, \ldots, k-1$ from a random number by a remainder, which is close to uniform but slightly biased, and if it is not coprime to $k$, tries the next one up, until it finds one.
+
+\begin{lemma}[Affine orders]
+\label{lem:affine}
+For $k \geq 2$, the search for a stride coprime to $k$ stops after at most $2\sqrt{k}$ tries, of $O(\log k)$ steps each, so it takes $O(\sqrt{k}\log k) \subseteq O(k)$ steps.
+\end{lemma}
+\begin{proof}
+Euclid's algorithm tests a stride in $O(\log k)$ steps. The search never passes $k-1$, which is coprime to $k$, so it stops within $j(k)$ tries, where $j(k)$, Jacobsthal's function, is the least number such that any $j(k)$ consecutive integers include one coprime to $k$. Kanold showed that $j(k) \leq 2^{\omega(k)}$, where $\omega(k)$ is the number of distinct prime factors of $k$~\cite{kanold_jacobsthal}, and $2^{\omega(k)}$ is at most the number of divisors of $k$, which is at most $2\sqrt{k}$.
+\end{proof}
+
+\section{Times per Thread Count}
+\label{sec:app-times}
+
+Tables~\ref{tab:app-lj} to~\ref{tab:app-hubs} list the median times per search that Figure~\ref{fig:scaling} plots, and those at 128 threads, for every graph and program; Section~\ref{sec:exp-setup} describes how we measured them.
+
+\pgfplotstableset{
+    times/.style={
+        string type,
+        column type=r,
+        columns={t, wd, mem, gapbs, gbbs, pasgal},
+        columns/t/.style={column name=$T$},
+        columns/wd/.style={column name=\wfdo},
+        columns/mem/.style={column name=\wfdomem},
+        columns/gapbs/.style={column name=GAPBS},
+        columns/gbbs/.style={column name=GBBS},
+        columns/pasgal/.style={column name=PASGAL},
+        begin table={\begin{tabular}},
+        every head row/.style={before row=\toprule, after row=\midrule},
+        every last row/.style={after row=\bottomrule},
+    },
+}
+
+\newcommand{\timestable}[1]{\footnotesize\setlength{\tabcolsep}{5pt}\pgfplotstabletypeset[times]{#1}}
+
+\begin{table}[H]
+    \caption{Median time per search on LiveJournal, in ms, at each number of threads $T$. The sequential baseline takes \seqLJ~ms.}
+    \label{tab:app-lj}
+    \centering
+    \timestable{\dataTwoLJ}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Twitter, in ms, at each number of threads $T$. The sequential baseline takes \seqTwitter~ms.}
+    \label{tab:app-twitter}
+    \centering
+    \timestable{\dataTwoTwitter}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Road-USA, in ms, at each number of threads $T$. The sequential baseline takes \seqRoad~ms. GAPBS ran at 128 threads in runs of its own.}
+    \label{tab:app-road}
+    \centering
+    \timestable{\dataTwoRoad}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on uk-2002, in ms, at each number of threads $T$. The sequential baseline takes \seqUK~ms.}
+    \label{tab:app-uk}
+    \centering
+    \timestable{\dataTwoUK}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Kronecker, in ms, at each number of threads $T$. The sequential baseline takes \seqKron~ms.}
+    \label{tab:app-kron}
+    \centering
+    \timestable{\dataTwoKron}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on the graph of hubs (Section~\ref{sec:exp-hubs}), in ms, at each number of threads $T$. The sequential baseline takes \seqHubs~ms.}
+    \label{tab:app-hubs}
+    \centering
+    \timestable{\dataTwoHubs}
+\end{table}
+
+\section{Times with Stalled Threads}
+\label{sec:app-stalls}
+
+Tables~\ref{tab:app-stall-lj} to~\ref{tab:app-share-hubs} list the median times per search with 112 threads that Figures~\ref{fig:stall-length}, \ref{fig:stall-random} and~\ref{fig:stall-share} plot, for every graph, program and stall; the rows at 0 are the runs without stalls, and Section~\ref{sec:exp-stalls} describes how we measured them.
+
+\pgfplotstableset{
+    stalls/.style={
+        string type,
+        column type=r,
+        columns={us, wd, mem, gapbs, gbbs, pasgal},
+        columns/us/.style={column name={Stall ($\mu$s)}},
+        columns/wd/.style={column name=\wfdo},
+        columns/mem/.style={column name=\wfdomem},
+        columns/gapbs/.style={column name=GAPBS},
+        columns/gbbs/.style={column name=GBBS},
+        columns/pasgal/.style={column name=PASGAL},
+        begin table={\begin{tabular}},
+        every head row/.style={before row=\toprule, after row=\midrule},
+        every last row/.style={after row=\bottomrule},
+    },
+    shares/.style={
+        stalls,
+        columns={share, wd, mem, gapbs, gbbs, pasgal},
+        columns/share/.style={column name={Stalled (\%)}},
+    },
+}
+
+\newcommand{\stalltable}[2]{\footnotesize\setlength{\tabcolsep}{5pt}\pgfplotstabletypeset[#1]{#2}}
+
+\begin{table}[H]
+    \caption{Median time per search on LiveJournal, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-lj}
+    \centering
+    \stalltable{stalls}{\dataStallLengthLiveJournal}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Twitter, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-twitter}
+    \centering
+    \stalltable{stalls}{\dataStallLengthTwitter}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Road-USA, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-road}
+    \centering
+    \stalltable{stalls}{\dataStallLengthRoad}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on uk-2002, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-uk}
+    \centering
+    \stalltable{stalls}{\dataStallLengthUk}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Kronecker, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-kron}
+    \centering
+    \stalltable{stalls}{\dataStallLengthKron}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on the graph of hubs, in ms, by the length of the stall of one thread per level or round (Figure~\ref{fig:stall-length}).}
+    \label{tab:app-stall-hubs}
+    \centering
+    \stalltable{stalls}{\dataStallLengthHubs}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on LiveJournal, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-lj}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthLiveJournal}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Twitter, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-twitter}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthTwitter}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Road-USA, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-road}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthRoad}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on uk-2002, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-uk}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthUk}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Kronecker, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-kron}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthKron}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on the graph of hubs, in ms, with random stalls for 2\% of the time, by stall length (Figure~\ref{fig:stall-random}).}
+    \label{tab:app-noise-hubs}
+    \centering
+    \stalltable{stalls}{\dataNoiseLengthHubs}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on LiveJournal, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-lj}
+    \centering
+    \stalltable{shares}{\dataNoiseShareLiveJournal}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Twitter, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-twitter}
+    \centering
+    \stalltable{shares}{\dataNoiseShareTwitter}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Road-USA, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-road}
+    \centering
+    \stalltable{shares}{\dataNoiseShareRoad}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on uk-2002, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-uk}
+    \centering
+    \stalltable{shares}{\dataNoiseShareUk}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on Kronecker, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-kron}
+    \centering
+    \stalltable{shares}{\dataNoiseShareKron}
+\end{table}
+
+\begin{table}[H]
+    \caption{Median time per search on the graph of hubs, in ms, with random stalls of 1~ms, by the share of time stalled (Figure~\ref{fig:stall-share}).}
+    \label{tab:app-share-hubs}
+    \centering
+    \stalltable{shares}{\dataNoiseShareHubs}
+\end{table}
+
+% the class balances the columns of the last page, which loses floats still waiting
+\clearpage

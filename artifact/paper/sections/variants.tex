@@ -1,0 +1,251 @@
+\section{Reducing Space through Level Reuse}
+\label{sec:variants}
+
+The method of Section~\ref{sec:dir-opt} keeps a node for every level, and every bucket array, until the search ends, since a delayed thread may still read them, so its memory grows with the number of levels and with all the vertices appended: a search of the road network allocates a node of $T$ entries for each of its 6,262 nonempty levels and for the empty level that ends it. This section describes a variant that keeps the entries of the threads in two nodes, one for the even levels and one for the odd, each reused two levels later, while each level adds only a record of constant size, with its plan and a link to the next level. A thread's bucket in a node keeps its array from level to level, so the memory of the variant depends on the largest levels, plus a constant per level. The difficulty is that a node is reused while threads that have fallen behind may still be working on the level it held before (Figure~\ref{fig:mem-protocol}).
+
+\begin{figure*}
+    \centering
+    \begin{tikzpicture}[protocol, seg/.style={draw=gray!60, fill=gray!8}]
+        \node[anchor=east] at (1.9,2.85) {bucket of $F$ in $M_0$};
+        \node[anchor=east] at (1.9,2.25) {bucket of $F$ in $M_1$};
+        \node[anchor=east] at (1.9,1.35) {fast thread $F$};
+        \node[anchor=east] at (1.9,0.45) {delayed thread $S$};
+        \foreach \y in {1.35, 0.45} {
+            \draw[lane] (2.0,\y) -- (15.4,\y);
+        }
+        % what F's buckets hold: each is emptied and tagged anew when F starts the level before
+        \foreach \a/\b/\t in {2.0/4.4/tag 0: level 0, 4.4/9.2/tag 2: level 2, 9.2/14.6/tag 4: level 4, 14.6/15.4/tag 6} {
+            \draw[seg] (\a,2.64) rectangle (\b,3.06);
+            \node[note] at ({(\a+\b)/2},2.85) {\t};
+        }
+        % labeled off the middle where the dashed lines below cross the row
+        \foreach \a/\b/\x/\t in {2.0/6.8/3.2/tag 1: level 1, 6.8/13.0/11.1/tag 3: level 3, 13.0/15.4/14.2/tag 5} {
+            \draw[seg] (\a,2.04) rectangle (\b,2.46);
+            \node[note] at (\x,2.25) {\t};
+        }
+        % the levels of F
+        \foreach \a/\b/\l in {2.0/4.4/0, 4.4/6.8/1, 6.8/9.2/2, 9.2/13.0/3, 13.0/14.6/4, 14.6/15.4/5} {
+            \draw[draw=black, fill=white, rounded corners=1.5pt] (\a,1.14) rectangle (\b,1.56);
+            \node[note] at ({(\a+\b)/2},1.35) {level \l};
+        }
+        \node[note, anchor=west] at (15.5,1.35) {returns};
+        % F reuses its bucket in M0
+        \draw[densely dashed, gray] (4.4,1.56) -- (4.4,3.06);
+        \draw[densely dashed, gray] (9.2,1.56) -- (9.2,3.06);
+        \node[event] at (4.4,3.3) {2};
+        \node[event] at (9.2,3.3) {3};
+        % S stalls in level 0, while it reads the bucket of F in M0
+        \draw[draw=black, fill=white, rounded corners=1.5pt] (2.0,0.24) rectangle (3.0,0.66);
+        \node[note] at (2.5,0.45) {level 0};
+        \draw[stall] (3.0,0.45) -- (9.8,0.45);
+        \node[event] at (3.0,0.9) {1};
+        \node[fail, minimum width=1.6cm] at (10.6,0.45) {not \textsc{Valid}};
+        \node[event] at (10.6,0.9) {4};
+        \node[work, minimum width=0.8cm] at (11.8,0.45) {skips};
+        \node[event] at (11.8,0.9) {5};
+        \draw[draw=black, fill=white, rounded corners=1.5pt] (12.2,0.24) rectangle (13.0,0.66);
+        \node[note] at (12.6,0.45) {level 3};
+        \draw[draw=black, fill=white, rounded corners=1.5pt] (13.0,0.24) rectangle (14.6,0.66);
+        \node[note] at (13.8,0.45) {level 4};
+        \draw[draw=black, fill=white, rounded corners=1.5pt] (14.6,0.24) rectangle (15.4,0.66);
+        \node[note] at (15.0,0.45) {level 5};
+        \node[note, anchor=west] at (15.5,0.45) {returns};
+        \draw[->, gray] (2.0,-0.15) -- (16.3,-0.15) node[note, anchor=north east] {time};
+    \end{tikzpicture}
+    \caption{The two nodes of the variant over time, seen from the bucket of a fast thread $F$ in each; level $d$ uses $M_{d \bmod 2}$, and $F$ empties and retags its bucket in a node when it starts the level before the one that the node holds next. (1)~A delayed thread $S$ stalls in level 0 while it reads the bucket of $F$, thread 0, in $M_0$, tagged 0. (2,~3)~$F$ retags that bucket 2, and then 4, and fills it with level 4. (4)~$S$ resumes and skips those entries, since $\textsc{Valid}(u, 0)$ requires $\mathit{dist}[u] = 0$, reading within the array, which only grows. (5)~$S$ finds level 1 chosen, takes the plans of levels 1 and 2, which are over, from their records, and joins level 3. Both threads return after level 5, which is empty.}
+    \Description{A timeline of the two level nodes and two threads. The fast thread goes through levels 0 to 5, and its bucket in each node is emptied and retagged two levels apart. The delayed thread stalls in level 0 while reading the fast thread's bucket in the first node, resumes after that bucket has been reused for level 4, rejects its entries as invalid, skips the levels that are over, and joins level 3.}
+    \label{fig:mem-protocol}
+\end{figure*}
+
+\subsection{Reusing Nodes}
+\label{sec:mem-reuse}
+
+The two nodes are $M_0$ and $M_1$, and level $d$ uses $M_{d \bmod 2}$; Algorithms~\ref{alg:mem} and~\ref{alg:mem-expand} write $N$ for the node of a thread's level and $N'$ for the other. Every bucket carries a \emph{tag}, the level that its vertices belong to. A thread starts level $d$ by emptying its own bucket in $N'$, which held an earlier level, and tagging it with $d+1$ (\textsc{StartLevel}); the thread is past level $d-1$ by then. A thread in level $d$ uses a bucket of $N$ only if it is tagged $d$ (Algorithm~\ref{alg:mem-expand}, line~\ref{ln:mem-td-tag}). A smaller tag means that the owner has not started level $d-1$, and so has appended nothing to the bucket for level $d$. A larger tag means that the owner has started level $d+1$, which it can do only once level $d+1$ has been chosen, by a thread that had finished level $d$.
+
+A thread that found a bucket tagged $d$ can still be overtaken by its owner, which may empty it and refill it for a later level while the thread reads it. The reads still stay within the bucket's array: arrays only grow during a search, none is freed before the search ends, and a thread reads the size of a bucket before its array (Algorithm~\ref{alg:mem-expand}, line~\ref{ln:mem-td-size}), so the array it finds has at least as many positions as the size it read, as in Section~\ref{sec:td-buckets}. What the positions hold is another matter, since the thread can meet vertices of later levels, or memory not written in this search. It therefore reads a vertex $u$ of another thread's bucket once, and takes it only if $u$ is a vertex number and $\mathit{dist}[u] = d$ (\textsc{Valid}, and Algorithm~\ref{alg:mem-expand}, line~\ref{ln:mem-valid}). Every such vertex is in $L_d$, so a thread expands only vertices of its own level, whatever it reads. A thread's own bucket needs no test, since only the thread itself reuses it.
+
+The fields that record progress, and their counterparts for frontier codes, change accordingly. A thread resets its field $\mathit{last}$ in $N$ before it tags its bucket in $N'$ (\textsc{StartLevel}), and another thread reads it for level $d$ only after reading that tag as $d+1$ (\textsc{Progress}). The two reads are not a snapshot, since the owner can move on between them, but they need not be one: a value read this way was written in level $d$, or the owner has started level $d+2$ by then, and level $d$ is over (Lemma~\ref{lem:mem-progress}). The flag $\mathit{done}$ becomes the latest level at which the owner's work is known to be finished (\textsc{MarkDone}), and a thread in level $d$ skips an owner whose flag is at least $d$; a delayed thread may write a smaller level over a larger one, which only makes other threads check finished work again. Stamps already hold levels (Section~\ref{sec:do-bu}), and the certificates of chunks (Section~\ref{sec:impl-chunks}) need no change: they hold the number of the search, and a vertex is expanded in only one level of a search, so a certificate of this search can only be one for the level of its vertex.
+
+The plans cannot live in the reused nodes, since a thread that has fallen behind must still find the plan of every level that it passes. Each level $d$ therefore gets a \emph{record} $R_d$ of its own, with its plan and a field $\mathit{next}$, the \emph{slot} for the record of level $d+1$, which starts out empty; the slot of level $0$ is a field $S_0$ of the search. A record takes the place of a proposal, and the CAS that installs it in the slot of its level, that of the claim (\textsc{ChoosePlan}): a thread that finds the slot of level $d$ empty writes a plan, computed as in Section~\ref{sec:do-plan} from the buckets of $N$ tagged $d$ and the plan of level $d-1$, into a record whose own slot is empty, tries once to install it with a CAS from empty, and adopts whichever record is installed. Nothing changes a plan once its record is installed, so every thread that reads the slot finds the plan whole, and a thread whose CAS fails keeps its record, which no other thread has seen, for the next level that it proposes for. Since each record carries the slot of the next level, no thread links a level while it expands one, and the records form a list, as the nodes of Section~\ref{sec:dir-opt} do. The search ends at the first level whose plan has no frontier, $n_f = 0$: that plan is top-down (Section~\ref{sec:do-end}), and every thread returns after it, without proposing for the next.
+
+Before the first call, every bucket of both nodes is empty and tagged $-1$; its flag $\mathit{done}$ and its progress field $\mathit{last}$, with their counterparts for the pass that writes frontier codes (Section~\ref{sec:impl-codes}), are $-1$, as are the stamps of the blocks; the bucket of thread 0 in $M_0$ is then tagged 0 and holds the source, with edge count $\deg(s)$; and $S_0$ is empty. The plan before level 0 is that of Algorithm~\ref{alg:wf-do}.
+
+A thread that finds the slot of level $d+1$ set knows that level $d$ is over, since level $d+1$ has been chosen, by a thread that had finished level $d$. A thread that finds in the slot of level $d$ a record whose own slot is set therefore takes the plan of level $d$ and moves on to level $d+1$ without starting level $d$ (Algorithm~\ref{alg:mem}, line~\ref{ln:mem-skip}), a record at a time, until it reaches a level whose successor has not been chosen. It thus holds the plan of the level before when it starts a level, as every other thread does. Threads make the same test between the owners of a level, and leave a level that is over (Algorithm~\ref{alg:mem-expand}, line~\ref{ln:mem-td-over}); the test only ends loops early.
+
+\begin{algorithm}
+\caption{The levels of the variant, as thread $t$ runs them. A slot is empty until a record $R$ is installed in it, with the plan of its level, $R.\mathit{plan}$, which carries the frontier size $n_f$ it was computed from, and the slot of the next level, $R.\mathit{next}$, at first empty. $S_0$ is the slot of level 0; $S$ holds the location of a slot, and $*S$ is the slot. In level $d$, $N = M_{d \bmod 2}$ and $N' = M_{(d+1) \bmod 2}$. The variables $d$, $N$, $N'$ and $R$ of \textsc{BFS}, and $\mathit{spare}$, which keeps a record that was not installed and starts null, are local to the thread; the other procedures, here and in Algorithm~\ref{alg:mem-expand}, use them.}
+\label{alg:mem}
+\begin{algorithmic}[1]
+\Procedure{BFS}{$s$}
+    \State $d \gets 0$; $S \gets$ the location of $S_0$; $P \gets$ the plan before level $0$
+    \While{$S \neq \mathit{null}$}
+        \State $N \gets M_{d \bmod 2}$; $N' \gets M_{(d+1) \bmod 2}$
+        \State $R \gets$ \Call{ChoosePlan}{$S$, $P$, $d$}; $P \gets R.\mathit{plan}$
+        \If{$R.\mathit{next}$ is empty} \Comment{else level $d$ is over} \label{ln:mem-skip}
+            \State \Call{StartLevel}{$d$} \label{ln:mem-start}
+            \If{$P.\mathit{direction}$ is top-down}
+                \State \Call{ExpandLevel}{$d$}
+            \Else
+                \State \Call{ScanLevel}{$d$}
+            \EndIf
+        \EndIf
+        \State $S \gets$ the location of $R.\mathit{next}$, or $\mathit{null}$ if $P.n_f = 0$; $d \gets d+1$
+    \EndWhile
+\EndProcedure
+\Statex
+\Procedure{ChoosePlan}{$S$, $P$, $d$}
+    \If{$*S$ is empty}
+        \State $R' \gets \mathit{spare}$, or a new record if $\mathit{spare}$ is null
+        \State $R'.\mathit{next} \gets$ empty
+        \State $R'.\mathit{plan} \gets$ \Call{Rule}{$P$, $N$, $d$} \Comment{from the buckets tagged $d$}
+        \State $\mathit{installed} \gets$ \Call{CAS}{$*S$, empty, $R'$} \label{ln:mem-cas}
+        \State $\mathit{spare} \gets$ null if $\mathit{installed}$, and $R'$ otherwise
+    \EndIf
+    \State \Return the record in $*S$
+\EndProcedure
+\Statex
+\Procedure{StartLevel}{$d$}
+    \State $N.\mathit{last}[t] \gets -1$ \label{ln:mem-reset}
+    \State $N'.B[t].\mathit{size} \gets 0$; $N'.\mathit{edges}[t] \gets 0$
+    \State $N'.B[t].\mathit{tag} \gets d+1$ \label{ln:mem-tag}
+\EndProcedure
+\Statex
+\Procedure{Valid}{$u$, $d$}
+    \State \Return $0 \leq u < n$ \textbf{and} $\mathit{dist}[u] = d$
+\EndProcedure
+\Statex
+\Procedure{Progress}{$o$, $d$}
+    \IfThen{$N'.B[o].\mathit{tag} \neq d+1$}{\Return $-1$} \label{ln:mem-progress-tag}
+    \State \Return $N.\mathit{last}[o]$
+\EndProcedure
+\Statex
+\Procedure{MarkDone}{$o$, $d$}
+    \IfThen{$N.\mathit{done}[o] < d$}{$N.\mathit{done}[o] \gets d$}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Expanding level $d$ in the variant, top-down or bottom-up, as thread $t$ runs it, with $d$, $N$, $N'$ and the record $R$ of level $d$ as in Algorithm~\ref{alg:mem}. \textsc{Expand} is that of Algorithm~\ref{alg:wf-td}, with \textsc{Discover} of Algorithm~\ref{alg:wf-do}, and \textsc{ScanBlock} that of Algorithm~\ref{alg:wf-bu}, testing $\mathit{dist}[u] = d$; both append to $N'.B[t]$ and write the distance $d+1$. A thread that finds the slot $R.\mathit{next}$ set leaves the level, which is over.}
+\label{alg:mem-expand}
+\begin{algorithmic}[1]
+\Procedure{ExpandLevel}{$d$}
+    \State $\rho \gets t$, then the other threads in a random order
+    \For{$k \gets 0$ \textbf{to} $T-1$}
+        \IfThen{$R.\mathit{next}$ is not empty}{\Return} \label{ln:mem-td-over}
+        \State $o \gets \rho[k]$
+        \IfThen{$N.\mathit{done}[o] \geq d$ \textbf{or} $N.B[o].\mathit{tag} \neq d$}{\textbf{continue}} \label{ln:mem-td-tag}
+        \State $\mathit{size} \gets N.B[o].\mathit{size}$; $A \gets N.B[o].\mathit{array}$ \label{ln:mem-td-size}
+        \IfThen{$\mathit{size} = 0$}{\textbf{continue}}
+        \If{$o = t$}
+            \For{$i \gets 0$ \textbf{to} $\mathit{size}-1$}
+                \State \Call{Expand}{$A[i]$}; $N.\mathit{last}[t] \gets i$
+            \EndFor
+        \Else
+            \State $\mathit{first} \gets$ \Call{Progress}{$o$, $d$} $+ 1$
+            \ForAll{$i$ from $\mathit{first}$ to $\mathit{size}-1$, in a random order}
+                \State $u \gets A[i]$
+                \IfThen{\Call{Valid}{$u$, $d$}}{\Call{Expand}{$u$}} \label{ln:mem-valid}
+            \EndFor
+        \EndIf
+        \State \Call{MarkDone}{$o$, $d$}
+    \EndFor
+\EndProcedure
+\Statex
+\Procedure{ScanLevel}{$d$}
+    \For{$k \gets 0$ \textbf{to} $K_t - 1$, \textbf{while} $N.\mathit{done}[t] < d$}
+        \IfThen{$\mathit{stamp}[t][k] \neq d$}{\Call{ScanBlock}{$X_{t,k}$}}
+        \State $N.\mathit{last}[t] \gets k$
+    \EndFor
+    \State \Call{MarkDone}{$t$, $d$}
+    \ForAll{threads $o \neq t$, in a random order}
+        \IfThen{$R.\mathit{next}$ is not empty}{\Return}
+        \IfThen{$N.\mathit{done}[o] \geq d$}{\textbf{continue}}
+        \State $\mathit{first} \gets$ \Call{Progress}{$o$, $d$} $+ 1$
+        \ForAll{blocks $k \geq \mathit{first}$, in a random order}
+            \IfThen{$N.\mathit{done}[o] \geq d$}{\textbf{break}}
+            \State $p \gets$ \Call{Progress}{$o$, $d$}
+            \If{$k > p$ \textbf{and} $\mathit{stamp}[o][k] \neq d$}
+                \State \Call{ScanBlock}{$X_{o,k}$}; $\mathit{stamp}[o][k] \gets d$
+            \EndIf
+        \EndFor
+        \State \Call{MarkDone}{$o$, $d$}
+    \EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Correctness and Wait-Freedom}
+\label{sec:mem-proof}
+
+We follow Section~\ref{sec:proof}. Level $d$ is \emph{chosen} at $\tau_d$, the time of the first CAS on its slot (Algorithm~\ref{alg:mem}, line~\ref{ln:mem-cas}), if there is one; as in Section~\ref{sec:pf-defs}, a thread can reach the slot and stop before its CAS. Line numbers in this section refer to Algorithm~\ref{alg:mem}. For a thread in level $d$, $N_d$ stands for $M_{d \bmod 2}$, and $B_{d,t}$ for the bucket of thread $t$ in it while the bucket is tagged $d$; the reference prefix $S_{d,t}$ is the first $k$ positions of $B_{d,t}$, where $k$ is its size at $\tau_d$ if it is tagged $d$ then, and $0$ otherwise. Unlike in Section~\ref{sec:proof}, the parts of a node are reused. The lemmas below show that a part that holds level $d$ is reused only after level $d+1$ has been chosen, so that every read on which the proof of Section~\ref{sec:proof} relies returns what it would there, while every other read is either checked or made too late to matter.
+
+\begin{lemma}[Slots]
+\label{lem:mem-slots}
+Only the first CAS on the slot of level $d$ succeeds, and every thread that reads the slot after it finds the record that it installed, with its plan unchanged; in particular, every thread that starts level $d$ (line~\ref{ln:mem-start}) does so after $\tau_d$, and follows the plan of that record. The slots reached from $S_0$ form a single list, which every thread walks in order. A thread skips level $d$ (line~\ref{ln:mem-skip}), or leaves it early, only after $\tau_{d+1}$, and for $d > 0$, a thread makes a CAS on the slot of level $d$ only after running level $d-1$ to the end, so $\tau_d$ comes after $\tau_{d-1}$.
+\end{lemma}
+\begin{proof}
+Only CASes from empty write a reachable slot, so the first one succeeds, and the slot never changes after it. The thread whose CAS succeeds wrote the plan of its record before its CAS and writes it no more, so as in Lemma~\ref{lem:plans}, every thread that reads the slot finds that plan. The slot of a record was set empty by its thread before the CAS that installs the record, and no other installed record has it, so as in Lemma~\ref{lem:list}, the slots reached from $S_0$ form a single list, and a thread moves from the slot of level $d$ only to the slot of the record installed there. A thread skips level $d$, or leaves it early, only on reading the slot of level $d+1$ set, so after $\tau_{d+1}$, and when it reads that slot again, in \textsc{ChoosePlan}, it finds it set and makes no CAS on it. A thread that makes a CAS on the slot of level $d$ has therefore run level $d-1$ to the end, which it started after $\tau_{d-1}$.
+\end{proof}
+
+\begin{lemma}[Reuse]
+\label{lem:mem-reuse}
+Thread $o$ tags its bucket in $M_{d \bmod 2}$ with $d$ only in \textsc{StartLevel}$(d-1)$, or before the first call if $d = 0$, and empties and retags it next in some \textsc{StartLevel}$(e)$ with $e \geq d+1$, after $\tau_{d+1}$; in between, it appends to it only vertices that it discovers in level $d-1$. It resets its field $\mathit{last}$ in $M_{d \bmod 2}$ for level $d$ only in \textsc{StartLevel}$(d)$, and next in some \textsc{StartLevel}$(e)$ with $e \geq d+2$, after $\tau_{d+2}$; in between, it writes it only in level $d$.
+\end{lemma}
+\begin{proof}
+Only $o$ writes its bucket and these fields. \textsc{StartLevel}$(e)$ writes the field in $M_{e \bmod 2}$ and the bucket in $M_{(e+1) \bmod 2}$, and in level $e$, a thread appends only to its bucket in $M_{(e+1) \bmod 2}$ and writes progress only in $M_{e \bmod 2}$. Thread $o$ calls \textsc{StartLevel} for increasing levels, each after the level has been chosen, and levels are chosen in increasing order (Lemma~\ref{lem:mem-slots}).
+\end{proof}
+
+\begin{lemma}[Bucket reads]
+\label{lem:mem-reads}
+Let a thread $X$ in level $d$ read the tag of the bucket $B$ of thread $o$ in $M_{d \bmod 2}$ as $d$, then its size as $k$, then its array $A$, and then position $i < k$ of $A$. The array has a position $i$. If $X$ read the position before $\tau_{d+1}$, it holds the vertex that $o$ appended there for level $d$, and if $X$ also read the size after $\tau_d$, then $k$ is at least the size of $S_{d,o}$. If every write so far is sound, a vertex $u$ that $X$ reads in $A$ passes \textsc{Valid}$(u, d)$ only if $u \in L_d$.
+\end{lemma}
+\begin{proof}
+Thread $o$ publishes an array before any size larger than the array it replaces (Algorithm~\ref{alg:bucket}, line~\ref{ln:bk-array}), and capacities never shrink during a search, so when $o$ wrote $k$, its array had at least $k$ positions. $X$ read the array after the size, so it found that array or a later one, which has at least as many, and no array is freed during the search. Thread $o$ empties $B$ before tagging it $d$, and $X$ read the size and the array after the tag. If $X$ read the position before $\tau_{d+1}$, all of these reads therefore came between the two calls of \textsc{StartLevel} in Lemma~\ref{lem:mem-reuse}, while $B$ held only the vertices that $o$ appended to it for level $d$, and the argument of Lemma~\ref{lem:buckets} applies. Finally, $\mathit{dist}[u] = d$ only if $\delta(u) = d$, by (S1).
+\end{proof}
+
+\begin{lemma}[Progress]
+\label{lem:mem-progress}
+If a thread $X$ in level $d$ gets $i \geq 0$ from \textsc{Progress}$(o, d)$, then $o$ wrote $i$ in level $d$, after finishing its position or block $i$ as in Lemma~\ref{lem:certs}(b) and~(c), or $X$ read it after $\tau_{d+2}$.
+\end{lemma}
+\begin{proof}
+$X$ read the tag of the bucket of $o$ in $M_{(d+1) \bmod 2}$ as $d+1$ before it read $M_{d \bmod 2}.\mathit{last}[o]$ (Algorithm~\ref{alg:mem}, line~\ref{ln:mem-progress-tag}). Only \textsc{StartLevel}$(d)$ of $o$ writes that tag, after resetting $\mathit{last}[o]$ to $-1$ (line~\ref{ln:mem-reset}). The stores of $o$ become visible in program order, and the loads of $X$ take effect in program order, so $X$ read the reset or a later value. By Lemma~\ref{lem:mem-reuse}, the later values that $o$ writes before it next resets the field, after $\tau_{d+2}$, are written in level $d$.
+\end{proof}
+
+\begin{lemma}[Flags and stamps]
+\label{lem:mem-flags}
+If a thread in level $d$ reads a value of at least $d$ in $M_{d \bmod 2}.\mathit{done}[o]$, the value is $d$, written by a thread in level $d$ at the end of its pass over $o$, or it was written after $\tau_{d+2}$. A stamp equal to $d$ was written by a thread in level $d$ after scanning its block.
+\end{lemma}
+\begin{proof}
+These flags and the stamps start at $-1$ in every search, and a thread writes into them only the level that it is in (\textsc{MarkDone} and \textsc{ScanLevel}). The levels of $M_{d \bmod 2}$ have the parity of $d$, and a thread is in a level past $d$ of that parity only after $\tau_{d+2}$.
+\end{proof}
+Lemmas~\ref{lem:mem-reuse}, \ref{lem:mem-progress} and~\ref{lem:mem-flags} hold in the same way for the counterparts of $\mathit{last}$ and $\mathit{done}$ for frontier codes.
+
+\begin{lemma}[Levels with vertices]
+\label{lem:mem-end}
+Suppose that every write is sound, and that (R1) and (R2) hold for every chosen level from the time it is chosen. Then for every level $e \leq D$ that is chosen, the record installed in its slot has a plan with $n_f \geq 1$.
+\end{lemma}
+\begin{proof}
+The plan comes from the thread $C$ whose CAS chose level $e$, which computed it from the sizes of the buckets tagged $e$ that it read before its CAS. For $e = 0$, these include the bucket of thread $0$, which holds the source. For $e > 0$, $C$ read them after running level $e-1$ to the end (Lemma~\ref{lem:mem-slots}), and as in the proof of Theorem~\ref{thm:mem} below, Lemma~\ref{lem:td-complete} or~\ref{lem:bu-complete} holds for $C$, with the buckets tagged $e$ in place of those of $N_e$: when it finished level $e-1$, every vertex of $L_e$, of which there is at least one, had been appended to a bucket tagged $e$, by $C$ itself or by a thread whose certificates $C$ had read. Under TSO, $C$ sees its own appends, and the appends of the other threads had reached memory before the certificates that $C$ read (Section~\ref{sec:pf-tso}). No bucket tagged $e$ is emptied before $\tau_{e+1}$ (Lemma~\ref{lem:mem-reuse}), which comes after $\tau_e$, and so after the reads of $C$. $C$ therefore read a size of at least 1 for one of these buckets.
+\end{proof}
+
+\begin{theorem}
+\label{thm:mem}
+Theorem~\ref{thm:correct} holds for the variant, and every call of \textsc{BFS}$(s)$ returns after $O((D+1)(Tn + m))$ steps of its own thread, whatever the other threads do.
+\end{theorem}
+\begin{proof}
+\emph{Soundness and readiness.} We argue as for Lemma~\ref{lem:ready}. Suppose that some write is not sound, and let $w$ be the first. We first show by induction on $d$ that (R1) and (R2) hold for every level $d$ chosen before $w$, from $\tau_d$ up to $w$. For level 0, they hold before any call starts. For the step from $d$ to $d+1$, let $C$ be the thread whose CAS chooses level $d+1$, before $w$. It ran level $d$ before $\tau_{d+1}$ (Lemma~\ref{lem:mem-slots}), so all of its reads in level $d$ came before $\tau_{d+1}$. By Lemmas~\ref{lem:mem-reads} to~\ref{lem:mem-flags}, each of them returned what the corresponding read returns in Section~\ref{sec:proof}: the sizes and reference prefixes of the buckets tagged $d$, and progress values, flags and stamps written in level $d$. Each of these values was written before $\tau_{d+1}$, after reads of its writer that came before $\tau_{d+1}$ too, and every write before $w$ is sound, so by induction on time, each value certifies the work that Lemma~\ref{lem:certs} says. Lemmas~\ref{lem:td-complete} and~\ref{lem:bu-complete} thus hold for $C$, with the buckets tagged $d+1$ in place of those of $N_{d+1}$, since every thread tags its bucket in $M_{(d+1) \bmod 2}$ before it expands level $d$, and as in Lemma~\ref{lem:ready}, (R1) and (R2) hold for level $d+1$ at $\tau_{d+1}$, and keep holding up to $w$. Now $w$ is made by a thread in some level $d$, which started the level after $\tau_d$ (Lemma~\ref{lem:mem-slots}), so the reads on which $w$ depends came after $\tau_d$, when (R1) held. In level $d$, the thread expands only vertices of its own bucket, which are in $L_d$ by (S2), and vertices that pass \textsc{Valid}$(u, d)$, which are in $L_d$ by Lemma~\ref{lem:mem-reads}, and its bottom-up test is $\mathit{dist}[u] = d$, which only vertices of $L_d$ pass, by (S1); all of these hold, since every write before $w$ is sound. The proof of Lemma~\ref{lem:discover} therefore applies to the thread that makes $w$, whatever else it read, and $w$ is sound, a contradiction. Every write is therefore sound, and the induction above, which then needs no bound $w$, gives (R1) and (R2) for every chosen level, from the time it is chosen.
+
+\emph{Late threads.} A thread that reads a part of $M_{d \bmod 2}$ after it was reused does so after $\tau_{d+1}$. Its writes are sound, and its certificates for level $d$, which may claim work that no thread did, can only make other threads in level $d$ skip work, and no thread needs work of level $d$ after $\tau_{d+1}$, which is also the earliest time at which a thread leaves level $d$ early or skips it (Lemma~\ref{lem:mem-slots}). Later levels ignore these certificates, by Lemmas~\ref{lem:mem-progress} and~\ref{lem:mem-flags}.
+
+\emph{The end.} By Lemma~\ref{lem:mem-end}, no level $e \leq D$ has a plan with no frontier, while the plan of level $D+1$ has none, since its buckets stay empty by (S2). So level $D+1$ is the first whose plan ends the search, and at any time, the records reached from $S_0$ are those of levels $0$ to $k$ for some $k \leq D+1$; the list reaches the record of level $D+1$ once some thread finishes level $D$. No thread skips level $D+1$, since no thread proposes for level $D+2$ and the slot of the record of level $D+1$ stays empty, so every call returns after running level $D+1$, which it starts after $\tau_{D+1}$; the proof of Theorem~\ref{thm:correct} then applies.
+
+\emph{Wait-freedom.} A call visits the slots of levels $0$ to $D+1$ once each, in order (Lemma~\ref{lem:mem-slots}), and reads at most two slots at each before it skips the level or starts it, so it runs at most $D+2$ levels. Choosing a plan reads the $T$ buckets of a node, sets up a record, and makes at most one CAS. Within a level, every loop runs over a range fixed when it starts, as in Theorem~\ref{thm:waitfree}, and a test of the next slot only ends one early; a size that a thread reads is one that the owner wrote, and is at most $n$, since a thread appends each vertex at most once in a search (Lemma~\ref{lem:once}). A thread thus takes at most $Tn$ positions in each level. Unlike in Theorem~\ref{thm:waitfree}, these need not add up to $Tn + 1$ over the search, since a thread that has fallen behind can find a bucket that its owner has reused, and take positions appended for a later level. The rest of the count of Theorem~\ref{thm:waitfree} carries over, and the sum is $O((D+1)(Tn + m))$.
+
+Under TSO, the CAS that installs the record of a level takes the place of the CAS on $\mathit{planner}$ in Section~\ref{sec:pf-tso}, and the orders that Lemmas~\ref{lem:mem-reads} and~\ref{lem:mem-progress} use are between two stores of a thread, or two loads, which TSO keeps.
+\end{proof}
+
+\subsection{Memory}
+\label{sec:mem-memory}
+
+The variant keeps two nodes of $T$ entries each, and the bucket of a thread in a node keeps its array for every level that the node holds. The array grows by doubling, to at most $\max(c_0, 2A)$ positions, where $A$ is the largest number of vertices that the thread appends to a level of that parity and $c_0$ the size of a bucket's first array (Section~\ref{sec:td-buckets}); its old arrays stay until the search ends, but together hold fewer positions than its current one. Each level adds a record of constant size, which also stays until the search ends, and a thread whose CAS fails keeps its record for its next proposal, so a search allocates at most $D+2+T$ records. Since a thread appends a vertex at most once (Lemma~\ref{lem:once}), the variant needs $O(T)$ entries, $O(D+T)$ records, and $O(\sum_t \max_d |B_{d,t}|) \subseteq O(T \max_d |L_d|)$ positions, against $O(T(D+2) + T^2)$ entries and $O(Tn)$ positions for the method of Section~\ref{sec:dir-opt}, which has a node of $T$ entries for each of its $D+2$ levels, and in which each thread can also hold a spare node that lost the race to be linked (Section~\ref{sec:td-link}). Before a bottom-up level, our implementation also makes a speculative reservation, from its current estimates of the undiscovered vertices and of the degrees of the frontier, which saves copying an array that would otherwise double several times. These estimates can under- or overestimate the number of vertices that the thread appends, so the bucket still grows on demand, and the request is bounded by about $1.25n/T$ positions. Every new array at least doubles the old one, so the old arrays still hold fewer positions than the current one, and with requests bounded this way, whatever the estimates, the arrays of the variant hold $O(\sum_t \max_d |B_{d,t}| + n)$ positions, the added $n$ being of the order of the per-vertex arrays; in the method of Section~\ref{sec:dir-opt}, whose buckets are new at every level, the reservations of a bottom-up level add up to at most about $1.25n$ positions. The measurements of Section~\ref{sec:exp-memory} include them. A record of our implementation takes 256 bytes, with its plan and its slot each on a pair of cache lines of its own, so that the CAS that later installs the next record in the slot takes no line that readers of the plan need; the records of a search of the road network take about 1.6~MB. The memory of the two methods is close on graphs whose largest levels hold a large share of all vertices, and far apart on graphs such as road networks, which have thousands of small levels.

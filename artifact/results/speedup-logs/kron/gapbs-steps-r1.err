@@ -1,0 +1,99 @@
+Selected CPUs: 4 3 8 5 10 7 12 9 14 11 16 13 18 15 20 17
+steps threads 16 searches 20 total 74343.8 median_total 72241.5
+step 0 allocate_dist wall 6.0 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 1 fill_dist wall 3459.6 fork 3.7 busy 3166.6 busy_max 3454.9 wait 289.3 wait_min 1.3
+step 2 allocate_queue_bitmaps wall 12.2 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 3 clear_bitmaps wall 945.4 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 4 td wall 18.0 fork 3.9 busy 7.0 busy_max 13.4 wait 7.2 wait_min 1.0
+step 5 td wall 1764.7 fork 3.2 busy 319.8 busy_max 1760.5 wait 1441.7 wait_min 1.2
+step 6 queue_to_bitmap wall 426.6 fork 3.1 busy 193.2 busy_max 423.3 wait 230.3 wait_min 0.6
+step 7 bu_clear_bitmap wall 246.9 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 8 bu wall 37982.8 fork 3.8 busy 37968.7 busy_max 37977.8 wait 10.4 wait_min 1.4
+step 9 bu_clear_bitmap wall 693.0 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 10 bu wall 16158.8 fork 4.0 busy 16149.1 busy_max 16153.8 wait 5.7 wait_min 1.1
+step 11 bu_clear_bitmap wall 700.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 12 bu wall 9413.0 fork 3.9 busy 9405.1 busy_max 9407.9 wait 4.0 wait_min 1.2
+step 13 bitmap_to_queue wall 1208.5 fork 2.8 busy 1180.5 busy_max 1204.6 wait 25.2 wait_min 1.0
+step 14 td wall 38.9 fork 2.9 busy 30.5 busy_max 35.0 wait 5.4 wait_min 1.0
+step 15 td wall 8.2 fork 2.8 busy 3.4 busy_max 4.5 wait 2.1 wait_min 1.0
+step 16 td wall 6.3 fork 2.5 busy 1.7 busy_max 2.7 wait 2.0 wait_min 1.0
+step 17 final_dist wall 1216.1 fork 2.9 busy 1111.3 busy_max 1212.0 wait 101.9 wait_min 1.2
+step 18 free_queue_bitmaps wall 30.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind allocate_dist count 1 wall 6.0 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind fill_dist count 1 wall 3459.6 fork 3.7 busy 3166.6 busy_max 3454.9 wait 289.3 wait_min 1.3
+kind allocate_queue_bitmaps count 1 wall 12.2 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind clear_bitmaps count 1 wall 945.4 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind td count 5 wall 1836.1 fork 15.3 busy 362.4 busy_max 1816.0 wait 1458.4 wait_min 5.1
+kind queue_to_bitmap count 1 wall 426.6 fork 3.1 busy 193.2 busy_max 423.3 wait 230.3 wait_min 0.6
+kind bu_clear_bitmap count 3 wall 1640.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind bu count 3 wall 63554.7 fork 11.7 busy 63522.9 busy_max 63539.5 wait 20.1 wait_min 3.8
+kind bitmap_to_queue count 1 wall 1208.5 fork 2.8 busy 1180.5 busy_max 1204.6 wait 25.2 wait_min 1.0
+kind final_dist count 1 wall 1216.1 fork 2.9 busy 1111.3 busy_max 1212.0 wait 101.9 wait_min 1.2
+kind free_queue_bitmaps count 1 wall 30.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind other wall 7.2
+Selected CPUs: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+steps threads 64 searches 20 total 28487.0 median_total 28731.8
+step 0 allocate_dist wall 7.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 1 fill_dist wall 2256.1 fork 18.2 busy 1711.9 busy_max 2236.1 wait 525.9 wait_min 1.6
+step 2 allocate_queue_bitmaps wall 12.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 3 clear_bitmaps wall 1034.2 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 4 td wall 80.6 fork 8.9 busy 44.8 busy_max 70.8 wait 26.9 wait_min 0.9
+step 5 td wall 1966.5 fork 6.9 busy 87.1 busy_max 1957.8 wait 1872.6 wait_min 1.7
+step 6 queue_to_bitmap wall 127.4 fork 6.6 busy 75.6 busy_max 119.8 wait 45.3 wait_min 1.0
+step 7 bu_clear_bitmap wall 233.9 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 8 bu wall 12187.8 fork 7.4 busy 12168.9 busy_max 12179.1 wait 11.5 wait_min 1.3
+step 9 bu_clear_bitmap wall 742.1 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 10 bu wall 5095.2 fork 8.5 busy 5081.2 busy_max 5085.5 wait 5.5 wait_min 1.2
+step 11 bu_clear_bitmap wall 755.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 12 bu wall 2831.2 fork 8.3 busy 2818.0 busy_max 2821.6 wait 4.9 wait_min 1.3
+step 13 bitmap_to_queue wall 352.0 fork 7.0 busy 322.1 busy_max 344.0 wait 23.0 wait_min 1.0
+step 14 td wall 42.3 fork 6.6 busy 25.7 busy_max 34.7 wait 10.0 wait_min 1.0
+step 15 td wall 19.8 fork 6.0 busy 8.5 busy_max 12.7 wait 5.3 wait_min 1.1
+step 16 td wall 18.5 fork 5.7 busy 7.4 busy_max 10.8 wait 5.4 wait_min 2.0
+step 17 final_dist wall 656.8 fork 6.2 busy 515.8 busy_max 649.2 wait 134.8 wait_min 1.3
+step 18 free_queue_bitmaps wall 50.3 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind allocate_dist count 1 wall 7.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind fill_dist count 1 wall 2256.1 fork 18.2 busy 1711.9 busy_max 2236.1 wait 525.9 wait_min 1.6
+kind allocate_queue_bitmaps count 1 wall 12.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind clear_bitmaps count 1 wall 1034.2 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind td count 5 wall 2127.8 fork 34.1 busy 173.5 busy_max 2086.8 wait 1920.2 wait_min 6.7
+kind queue_to_bitmap count 1 wall 127.4 fork 6.6 busy 75.6 busy_max 119.8 wait 45.3 wait_min 1.0
+kind bu_clear_bitmap count 3 wall 1731.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind bu count 3 wall 20114.2 fork 24.2 busy 20068.1 busy_max 20086.2 wait 21.9 wait_min 3.8
+kind bitmap_to_queue count 1 wall 352.0 fork 7.0 busy 322.1 busy_max 344.0 wait 23.0 wait_min 1.0
+kind final_dist count 1 wall 656.8 fork 6.2 busy 515.8 busy_max 649.2 wait 134.8 wait_min 1.3
+kind free_queue_bitmaps count 1 wall 50.3 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind other wall 16.0
+Selected CPUs: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 84 83 86 85 88 87 90 89 92 91 94 93 96 95 98 97 100 99 102 101 104 103 106 105 108 107 110 109 112 111
+steps threads 112 searches 20 total 24896.5 median_total 24810.0
+step 0 allocate_dist wall 9.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 1 fill_dist wall 2649.8 fork 13.6 busy 1858.3 busy_max 2633.4 wait 777.9 wait_min 2.7
+step 2 allocate_queue_bitmaps wall 8.3 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 3 clear_bitmaps wall 1127.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 4 td wall 99.4 fork 13.3 busy 37.1 busy_max 85.1 wait 48.9 wait_min 1.1
+step 5 td wall 2065.4 fork 10.0 busy 62.3 busy_max 2052.9 wait 1993.1 wait_min 2.2
+step 6 queue_to_bitmap wall 120.3 fork 9.4 busy 76.4 busy_max 109.7 wait 34.4 wait_min 1.4
+step 7 bu_clear_bitmap wall 269.6 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 8 bu wall 9228.8 fork 10.8 busy 9203.4 busy_max 9216.3 wait 14.6 wait_min 1.8
+step 9 bu_clear_bitmap wall 779.6 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 10 bu wall 3914.3 fork 12.4 busy 3890.7 busy_max 3900.0 wait 11.2 wait_min 2.0
+step 11 bu_clear_bitmap wall 781.6 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+step 12 bu wall 2713.7 fork 12.0 busy 2693.2 busy_max 2699.5 wait 8.4 wait_min 2.1
+step 13 bitmap_to_queue wall 266.6 fork 10.9 busy 234.5 busy_max 254.2 wait 21.1 wait_min 1.6
+step 14 td wall 70.9 fork 9.7 busy 43.9 busy_max 60.0 wait 17.2 wait_min 1.2
+step 15 td wall 31.3 fork 10.1 busy 13.2 busy_max 20.0 wait 7.9 wait_min 1.2
+step 16 td wall 31.7 fork 10.4 busy 12.3 busy_max 18.1 wait 9.0 wait_min 3.1
+step 17 final_dist wall 630.6 fork 9.7 busy 477.6 busy_max 619.8 wait 143.3 wait_min 1.2
+step 18 free_queue_bitmaps wall 52.6 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind allocate_dist count 1 wall 9.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind fill_dist count 1 wall 2649.8 fork 13.6 busy 1858.3 busy_max 2633.4 wait 777.9 wait_min 2.7
+kind allocate_queue_bitmaps count 1 wall 8.3 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind clear_bitmaps count 1 wall 1127.7 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind td count 5 wall 2298.6 fork 53.6 busy 168.9 busy_max 2236.1 wait 2076.1 wait_min 8.9
+kind queue_to_bitmap count 1 wall 120.3 fork 9.4 busy 76.4 busy_max 109.7 wait 34.4 wait_min 1.4
+kind bu_clear_bitmap count 3 wall 1830.8 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind bu count 3 wall 15856.8 fork 35.2 busy 15787.4 busy_max 15815.8 wait 34.2 wait_min 5.9
+kind bitmap_to_queue count 1 wall 266.6 fork 10.9 busy 234.5 busy_max 254.2 wait 21.1 wait_min 1.6
+kind final_dist count 1 wall 630.6 fork 9.7 busy 477.6 busy_max 619.8 wait 143.3 wait_min 1.2
+kind free_queue_bitmaps count 1 wall 52.6 fork 0.0 busy 0.0 busy_max 0.0 wait 0.0 wait_min 0.0
+kind other wall 44.7
