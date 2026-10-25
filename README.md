@@ -1,4 +1,4 @@
-# WFGT: Wait-Free Parallel Breadth-First Search (BFS)
+# WFGT: Wait-Free Graph Traversal
 
 This repository holds the paper *Fast Wait-Free Parallel Breadth-First Search*
 (Aayush Kumar, 2026), its implementation, and the scripts and data behind
