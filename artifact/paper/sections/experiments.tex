@@ -38,7 +38,7 @@ We compare our method with three of the fastest BFS implementations for shared m
 \label{sec:exp-speed}
 
 \begin{table*}
-    \caption{Each program's best median time, in ms per search, over 1 to 128 threads on two sockets, with the thread count in parentheses. The fastest program on each graph is in bold; on uk-2002, our two methods are within 0.1\% of each other. The best thread counts, and the ratios in the text, come from the unrounded medians.}
+    \caption{Each program's best median time, in ms per search, over 1 to 128 threads on two sockets, with the thread count in parentheses. The fastest program on each graph is in bold; on uk-2002, \wfdomem is 0.1\% faster than \wfdo. The best thread counts, and the ratios in the text, come from the unrounded medians.}
     \label{tab:best}
     \small
     \begin{tabular}{l r r r r r r}
@@ -48,7 +48,7 @@ We compare our method with three of the fastest BFS implementations for shared m
         LiveJournal & 96.2 & \textbf{4.2} (112) & 4.5 (112) & 5.4 (112) & 6.7 (112) & 9.2 (128) \\
         Twitter & 3038.2 & 43.6 (128) & \textbf{43.1} (128) & 55.7 (112) & 89.0 (112) & 121.3 (128) \\
         Road-USA & 851.3 & 113.7 (48) & \textbf{94.4} (48) & 273.4 (24) & 1273.3 (32) & 147.2 (112) \\
-        uk-2002 & 1183.7 & \textbf{25.4} (112) & \textbf{25.4} (96) & 37.1 (112) & 40.1 (96) & 84.3 (112) \\
+        uk-2002 & 1183.7 & 25.4 (112) & \textbf{25.4} (96) & 37.1 (112) & 40.1 (96) & 84.3 (112) \\
         Kronecker & 985.5 & 13.3 (128) & \textbf{13.1} (128) & 23.2 (112) & 38.0 (112) & 77.0 (128) \\
         Hubs & 1463.9 & 64.5 (128) & \textbf{61.8} (128) & 332.7 (48) & 90.1 (112) & 141.5 (112) \\
         \bottomrule
